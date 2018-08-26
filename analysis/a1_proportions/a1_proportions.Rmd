@@ -1,0 +1,371 @@
+---
+title: "Modeling proportions"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis')
+
+library(dplyr)
+library(tidyr)  
+library(data.table)
+library(knitr)
+library(kableExtra)
+library(survival)
+library(reshape2)
+library(xlsx)
+library(readxl)
+library(lme4)
+```
+
+
+```{r}
+dat <- data.table(readRDS("../data/prog100_analysis_data.rds"))
+dat2 <- dat[, c("index_ac_lmwh","outcome_lmwh", "index_ac_warfarin","outcome_warfarin") := .(index_ac=="LMWH", outcome=="LMWH", index_ac=="Warfarin", outcome=="Warfarin")]
+
+antiplatelets <- colnames(dat2)[grep("antiplatelet", colnames(dat2))]
+comorb <- colnames(dat2)[grep("comorbidity", colnames(dat2))]
+
+# unwrap combined index VTE types into columns of binary indicators
+vte_info <- read_excel("../data/prog8_vte.xlsx", sheet = "raw_VTE_POS")
+vte_info2 <- unique(data.table(vte_info)[!is.na(VTE_type),.(patid, VTE_type)])
+vte <- model.matrix(patid~VTE_type+0, data=vte_info2)
+colnames(vte) <- gsub("type", "", colnames(vte))
+vte2 <- data.frame(cbind(vte_info2[,1], vte))
+vte3 <- aggregate(. ~ patid, vte2, sum)
+dat2 <- merge(x=dat2, y=vte3, by="patid", all.x = TRUE)
+
+# combine the 3 rarest VTE types
+dat2[,VTE_ivc_rv_pv:= as.numeric((VTE_IVC | VTE_Portal.vein | VTE_Renal.vein))]
+
+comorb_names <- colnames(dat2)[grep("comorbidity", colnames(dat2))]
+dat2[, (comorb_names) := lapply(.SD, function(x) ifelse(is.na(x), 0, x)), .SDcols = comorb_names]
+dat2[, race := ifelse(race=="", "U", race)]
+```
+
+
+# Usual GLMM logistic
+
+## 1. GLMM for comparing proportions of LMWH at indexAC versus AC3Mo
+```{r}
+dat3 <- melt(dat2, measure.vars = c("index_ac_lmwh", "outcome_lmwh"),
+             value.name = "LMWH", variable.name = "time")
+dat3[, c("clmid", "fill_dt", "category", "brand_name", "gen_name", "copay", "copay_sum", "days_sup", "quantity","strength", "npi", "index_ac_warfarin", "outcome_warfarin"):=NULL]
+dat4 <- unique(dat3)
+dat4$age_c <- scale(dat4$age)
+
+sample_id <- sample(dat4$patid,2000)
+sample_dat <- dat4[dat4$patid %in% sample_id,]
+sample_dat$index_vte_type <- as.factor(sample_dat$index_vte_type)
+# center age
+# sample_dat$age_c <- sample_dat$age - mean(sample_dat$age)
+levels(sample_dat$index_vte_type)
+
+example <- sample_dat[sample_dat$patid==factor(sample_dat$patid[1:2]),] %>%  arrange(patid, time)
+# kable(example) %>%
+  # kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+### 1.1 Model 1: logit(LMWH) = age + time + $b_i$
+Centering age around mean relieves the convergence problem when time is included in the model.
+```{r}
+system.time(fit1 <- glmer(LMWH ~ age_c + time + (1|patid), data=sample_dat, family = "binomial"))
+summary(fit1)
+```
+
+
+### 1.2 Model 2: age + index VTE type, where IVC, PV, and RV are combined into one category.
+
+#### Cell counts of index VTE type by 
+```{r, warning=TRUE}
+# fit2 <- glmer(LMWH ~ age_c + index_vte_type + (1|patid),data=sample_dat, family = "binomial")
+# summary(fit2)
+
+table(dat4$index_vte_type, dat4$LMWH, dat4$time) # notice that ivc, pv, and rv have small counts
+dat4[, index_vte_type2 := ifelse(index_vte_type %in% c("IVC", "Portal vein", "Renal vein"), "ivc_rv_rv", index_vte_type)]
+table(dat4$index_vte_type2, dat4$LMWH)
+
+sample_dat <- dat4[dat4$patid %in% sample_id,]
+sample_dat$index_vte_type2 <- as.factor(sample_dat$index_vte_type2)
+
+vte_names0 <- colnames(sample_dat)[grep("VTE_", colnames(sample_dat))]
+# all distinct VTE categories
+vte_names1 <- vte_names0[-which(vte_names0 %in% c("VTE_IVC","VTE_Portal.vein", "VTE_Renal.vein"))] 
+# "VTE_ivc_rv_pv" as the reference level
+vte_names_noref <- vte_names1[-which(vte_names1 == "VTE_ivc_rv_pv")]
+
+data_index_lmwh <- dat4[time=="index_ac_lmwh", .SD, .SDcols=c(comorb_names, vte_names1, "LMWH")]
+index_lmwh_ct <- aggregate(.~LMWH, data_index_lmwh, sum)
+# kable(index_lmwh_ct) %>%
+#   kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+data_outcome_lmwh <- dat4[time=="outcome_lmwh", .SD, .SDcols=c(comorb_names, vte_names1, "LMWH")]
+outcome_lmwh_ct <- aggregate(.~LMWH, data_outcome_lmwh, sum)
+# kable(outcome_lmwh_ct) %>%
+#   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+It turns out that the model fails to converge by using the default optimizer: BOBYQA + Nelder-Mead. Simply increasing maxfun does resolve this convergence issue. Fortunately using the optimizer BOBYQA does not have convergence issue.
+
+```{r}
+system.time(fit2 <- glmer(LMWH ~ age_c + index_vte_type2 + (1|patid),data=sample_dat, family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=100000))))
+summary(fit2)
+```
+
+Trying different optimizers on the same model:
+source: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+```{r}
+source(system.file("utils", "allFit.R", package="lme4"))
+fit2.all <- allFit(fit2)
+
+is.OK <- sapply(fit2.all,is,"merMod")  
+fit2.all.OK <- fit2.all[is.OK]
+# lapply(fit2.all.OK,function(x) x@optinfo$conv$lme4$messages)
+```
+
+```{r}
+# get log likelihood
+(lliks <- sort(sapply(fit2.all.OK,logLik)))
+fit2.stddev <- t(sapply(fit2.all.OK,function(x) sqrt(unlist(VarCorr(x)))))
+print(fit2.stddev,digits=3)
+```
+
+
+
+## 2. Use original index VTE type
+
+Instead of combining multiple index VTE types into a single category, we use the original VTE types. For example, "Lower extremity DVT + Pulmonary embolism" (1 level) is unwrapped into "Lower extremity DVT" and "Pulmonary embolism" (2 levels).
+
+
+### 2.1 Fit GLMM model with binary index VTEs:
+Model fails to converge using default optimizer. No convergence issue if using BOBYQA.
+```{r}
+fm3 <- as.formula(paste("LMWH~", paste(vte_names, collapse="+"), "+ age_c + time + (1|patid)"))
+
+system.time(fit3 <- glmer(fm3, data=sample_dat, family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=100000))))
+summary(fit3)
+```
+
+
+### 2.2 GLMM with age + time + binary index VTEs + binary comorbidities
+
+If no reference level is set, the model gives message: unable to evaluate scaled gradientModel failed to converge: degenerate  Hessian with 1 negative eigenvalues. Setting reference levels for index VTE and comorbidity resolves this issue.
+```{r}
+# "VTE_ivc_pv_rv" as reference level for index VTE; "comorbidity.Aids.HIV" as reference level for comorbidities
+fm4 <- as.formula(paste("LMWH~", paste(c(vte_names, comorb_names[-1]), collapse="+"), "+ age_c + time + (1|patid)"))
+
+system.time(fit4 <- glmer(fm4, data=sample_dat, family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=100000))))
+summary(fit4)
+print(summary(fit4), correlation=TRUE)
+```
+
+It looks like some columns may have 0 coefficients, based on the fixed effect estimates.
+
+In addition, if a random slope on time is added to fit4, the model will not converge.
+
+
+
+### 2.3 GLMM with age + time + binary index VTEs + binary comorbidities + race + gender
+```{r}
+# "VTE_ivc_pv_rv" as reference level for index VTE; "comorbidity.Aids.HIV" as reference level for comorbidities
+fm5 <- as.formula(paste("LMWH~", paste(c(vte_names, comorb_names[-1]), collapse="+"), "+ age_c + time + race + male + education + (1|patid)")) #income_range + product + occupation + 
+
+system.time(fit5 <- glmer(fm5, data=sample_dat, family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e8))))
+summary(fit5)
+print(summary(fit5), correlation=TRUE)
+```
+
+This is the largest model with no convergece issue we can get so far.
+
+
+```{r}
+# use the level with the largest count as the reference level
+```
+
+
+
+
+### 2.4 GLMM with age + time + binary index VTEs + binary comorbidities + race + gender + education + income_range.
+This model does not converge.
+```{r}
+# "VTE_ivc_pv_rv" as reference level for index VTE; "comorbidity.Aids.HIV" as reference level for comorbidities
+fm6 <- as.formula(paste("LMWH~", paste(c(vte_names, comorb_names[-1]), collapse="+"), "+ age_c + time + race + male + education + income_range + (1|patid)")) #product + occupation + 
+
+system.time(fit6 <- glmer(fm6, data=sample_dat, family = "binomial", nAGQ=1, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e8))))
+summary(fit6)
+print(summary(fit6), correlation=TRUE)
+```
+
+No convergence issue using nAGQ=0:
+```{r}
+system.time(fit7 <- glmer(fm6, data=sample_dat, family = "binomial", nAGQ=0, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e8))))
+summary(fit7)
+```
+
+nAGQ means 'number of adaptive Gauss-Hermite quadrature points', and sets how glmer will integrate out the random effects when fitting the mixed model. When nAGQ is greater than 1, then adaptive quadrature is used with nAGQ points. When nAGQ =
+1, the Laplace approximation is used, and when nAGQ = 0, the integral is 'ignored'. Without being too specific (and therefore perhaps too technical), nAGQ = 0 means that the random effects only influence the estimates of the fixed effects through their estimated conditional modes -- therefore, nAGQ = 0 does not completely account for the randomness of the random effects. To fully account for the random effects, they need to be integrated out. 
+(Source: https://stats.stackexchange.com/questions/77313/why-cant-i-match-glmer-family-binomial-output-with-manual-implementation-of-g/79826#79826)
+
+
+
+## 3. Troubleshooting convergence: Assessing Convergence for Fitted Models
+Reference: https://rpubs.com/bbolker/lme4trouble1
+
+### 3.1 Check singularity
+```{r}
+# theta = random-effects parameter estimates: these are parameterized as the relative Cholesky factors of each random effect term
+tt <- getME(fit6,"theta") 
+
+# lower = lower bounds on model parameters (random effects parameters only)
+ll <- getME(fit6,"lower")
+
+min(tt[ll==0]) # not small, should not be an issue.
+```
+
+### 3.2 Double-checking gradient calculations
+
+```{r}
+# recompute gradient and Hessian with Richardson extrapolation from numDeriv package
+devfun <- update(fit6, devFunOnly=TRUE)
+pars <- getME(fit6,c("theta","fixef"))
+
+if (require("numDeriv")) {
+  cat("hess:\n"); print(hess <- hessian(devfun, unlist(pars)))
+  cat("grad:\n"); print(grad <- grad(devfun, unlist(pars)))
+  cat("scaled gradient:\n")
+  print(scgrad <- solve(chol(hess), grad))
+}
+max(pmin(abs(scgrad),abs(grad))) 
+eigen(hess)$values
+
+
+# internal calculations in glmer:
+derivs1 <- fit6@optinfo$derivs
+sc_grad1 <- with(derivs1,solve(Hessian,gradient))
+cat("max scaled gradient: "); print(max(abs(sc_grad1))) 
+cat("max of parallel min among scaled gradient and gradiant: "); max(pmin(abs(sc_grad1), abs(derivs1$gradient))) 
+```
+
+
+### 3.3 Restart
+
+```{r}
+## restart the fit from the original value (or a slightly perturbed value):
+fit6.restart <- update(fit6, start=pars) # still fails to converge unfortunately
+```
+
+
+### 3.4 try all available optimizers
+
+```{r}
+source(system.file("utils", "allFit.R", package="lme4"))
+fit6.all <- allFit(fit6)
+ss <- summary(fit6.all)
+ss$ fixef               ## extract fixed effects
+ss$ llik                ## log-likelihoods
+ss$ sdcor               ## SDs and correlations
+ss$ theta               ## Cholesky factors
+ss$ which.OK            ## which fits worked
+```
+
+
+## 4. Drop comorbidities (because of too many levels)
+
+```{r}
+# "VTE_ivc_pv_rv" as reference level for index VTE; "comorbidity.Aids.HIV" as reference level for comorbidities
+fm8 <- as.formula(paste("LMWH~", paste(vte_names_noref, collapse="+"), "+ age_c + time + race + male + education + income_range + product + (1|patid)")) #occupation + 
+
+system.time(fit8 <- glmer(fm8, data=sample_dat, family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e8))))
+summary(fit8)
+```
+
+
+
+
+
+
+## 5. Use GLMM LASSO
+
+```{r}
+library(glmmLasso)
+# fm6 <- as.formula(paste("LMWH~", paste(c(vte_names, comorb_names[-1]), collapse="+"), "+ age_c + time + race + male + education"))
+fm7 <- as.formula(paste("LMWH~", paste(c(vte_names, comorb_names[-1]), collapse="+"), "+ age_c + time + race"))
+
+sample_dat$patid <- as.factor(sample_dat$patid)
+glmmLassoControl(method="REML", epsilon=1e-4)
+myglmm <- function(l){
+  glmmLasso(fm7, rnd = list(patid=~1), lambda=l, data=sample_dat, family = binomial(link = "logit"), control=list(print.iter=TRUE))
+}
+system.time(myglmm(l=0))
+system.time(myglmm(l=10))
+system.time(myglmm(l=20))
+```
+
+
+
+
+
+
+
+
+
+
+```{r echo=FALSE, eval=FALSE}
+## GLMM for comparing proportions of Warfarin at indexAC versus AC3Mo
+dat3 <- melt(dat2, measure.vars = c("index_ac_lmwh", "outcome_lmwh"),
+             value.name = "LMWH", variable.name = "time")
+dat3[, c("clmid", "fill_dt", "category", "brand_name", "gen_name", "copay", "copay_sum", "days_sup", "quantity","strength", "npi", "index_ac_warfarin", "outcome_warfarin"):=NULL]
+dat4 <- unique(dat3)
+```
+
+
+
+```{r echo=FALSE, eval=FALSE}
+fit5 <- glmer(LMWH ~ age_c + time + index_vte_type,data=sample_dat, family = "binomial")
+summary(fit5)
+```
+
+```{r echo=FALSE, eval=FALSE}
+vte <- data.frame(model.matrix(~sample_dat$index_vte_type+0))
+colnames(vte) <- gsub("sample_dat.index_vte_type","vte",colnames(vte))
+sample_dat <- cbind(sample_dat, vte)
+
+
+
+# add all index vte types
+# vte_nm <- colnames(sample_dat)[grep("vte", colnames(sample_dat))][5:10]
+vte_nm <- colnames(vte)
+vars1 <- c("age", vte_nm[-which(vte_nm%in% c("vteIVC", "vtePortal.vein", "vteRenal.vein"))])
+fmla1 <- as.formula(paste("Y~", paste(vars1, collapse="+"), "+ time + (1|patid)"))
+
+# fit6 <- glmer(fmla1,data=sample_dat, family = "binomial")
+# summary(fit6)
+
+```
+
+
+
+```{r echo=FALSE, eval=FALSE}
+# not using this chunk
+dat[, strength_num := as.numeric(trimws(gsub("[M[:punct:]].*$", "", dat$strength)))]
+dat2 <- dat[, .(patid, index_ac, index_ac_dt, index_ac_copay, index_ac_copay_rng,
+                outcome, outcome_dt, outcome_copay, outcome_copay_rng, days_sup,
+                strength, strength_num,
+                cancer_type_combined )]
+```
+
+
+
+
+
+
+
+
+
+
+

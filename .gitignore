@@ -1,0 +1,13 @@
+*.log
+*.Rout
+/*.RData
+*.Rhistory
+*data/
+!data/prog101_nobs_counts
+!data/prog101_table1_stats.png
+*archive/
+*rsconnect/
+checklist.txt
+prep/tasks_prep.bat
+*.bat
+data_wrangling*

@@ -1,0 +1,336 @@
+---
+title: "Multinomial logistic regressions on AC3Mo"
+output:
+  html_document: default
+  html_notebook: deafult
+---
+
+# Summary:
+At 3 months, people with "Other" and "Not captured". Sample size = 12652.
+
+In sensitivity analysis, at 4 months people with "Other" and "Not captured". Sample size = 10134.
+
+Note that patients used in the sensitivity analysis is a subset of the analysis at 3 months.
+
+
+## About the covariates
+
+The following describes the process of selecting variables into the regression model, and gives reasons to why certain variables are not included in the model.
+
+- In all SES variables including race, education, federal poverty level, home ownership, occupation, income, networth, and division, all NA values are coded as the same as the unknown level ("0" or "U"). \\
+In the source data, race has values U, A, H, W, B, and "" (blank), where U means "Unknown". Networth range has values 0, 1, 2, 3, 4, 5, and "" (blank), where 0 means "Unknown". In the model, all blank values are filled in with the unknown level coding "U" or "0". In the end, race only has values  U, A, H, W, and B; networth range only has values 0,1,2,3,4,5. Variables having a level "Unknown" and having blank values are modified in this way. Such variables include race, education, federal poverty level, home ownership, occupation, income, networth range, and division. \\
+A patient may either have no NAs in any of these 8 SES variables, or have NAs in all of these SES variables. 375 patients (2.51%) have NAs in the SES variables.
+
+- Federal poverty level only has 3 levels "Above 400% FPL", "Below 400% FPL", and "Unkown", and very few people ($\leq$3) have "Below 400% FPL". Thus fed\_poverty is not used.
+
+- Home ownership only has "probable homeowner" and "unknown". This does not provide useful information so is not used.
+
+- Occupation has >75\% "unknown" and is thus not used.
+
+
+
+Categories of some variables are combined, due to small cell counts which causes difficulty in fitting the model and yielding good parameter estimates.
+
+Here is description of variables used in the model:
+
+- index\_vte\_type: categorical variable. It has levels "VTE_Lower.extremity.DVT", "VTE_Other", "VTE_Pulmonary.embolism", "VTE_Upper.extremity.DVT", and "VTE_ivc_rv_pv".
+
+- charlson_comorb_score: Charlson comorbidity score.
+
+- Age\_s: continuous variable, defined as (age - mean of age) / standard deviation of age. 
+
+- Race: categorical variable. It has levels "A", "B", "H", "W", and "U", where "W" (white) is the reference level.
+
+- Male: = 1 if a patient is male, and 0 if female.
+
+- Education2: categorical variable. Since level "Less than 12th Grade" ("A") has too few counts, it is combined with level "High School Diploma" ("B") into in to a single level, coded as "AB". The variable has levels "AB", "C", "D", and "U", where "<Bachelor degree" ("C") is the reference level.
+
+- Hospitalized: = 1 if a patient was hospitalized within 28 days prior to index VTE date, and 0 if not.
+
+- History of VTE: = 1 if a patient has history of VTE, and 0 if not.
+
+- Division: categorical variable. "EAST NORTH CENTRAL" is the reference level.
+
+- Income\_range: categorical variable. "6" is the reference level.
+
+- Product: categorical variable. "HMO" is the referene level.
+
+- Malignancies: 8 binary variables. Each column has values 0 and 1. Each malignancy name is coded as "malignancy.cancer". For example, "malignancy_Brain.CNS" means stomach cancers. "malignancy_Brain.CNS" = 1 if the patient has brain CNS on index cancer date. Malignancies follow the categorization in sheet "Table 1 Cleaned for Abstract" in "Optum Table 1 and 2 w regression 7-26-18.xlsx".
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis/a1_proportions')
+
+library(dplyr)
+library(tidyr)  
+library(data.table)
+library(knitr)
+library(kableExtra)
+library(reshape2)
+library(xlsx)
+library(readxl)
+library(mlogit)
+library(nnet)
+```
+
+
+```{r echo=FALSE}
+dat <- data.table(readRDS("../../data/prog100_analysis_data.rds"))
+
+vars_not_wanted <- c("clmid", "fill_dt", "category", "brand_name", "gen_name", "copay", "copay_sum", "days_sup", "quantity", "strength", "npi")
+dat1 <- unique(dat[,(vars_not_wanted) := NULL])
+
+# UNKNOWN VALUE IN THESE VARIABLES ARE CODED AS "U"
+ses1 <- c("education", "fed_poverty",  "occupation")
+dat2 <- dat1[, (ses1) := lapply(.SD, function(x) ifelse(is.na(x), "U", x)), .SDcols=ses1]
+
+# UNKNOWN VALUE IN THESE VARIABLES ARE CODED AS "0"
+ses2 <- c("home_ownership", "networth_range", "income_range")
+dat2[, (ses2) := lapply(.SD, function(x) ifelse(is.na(x), "0", x)), .SDcols=ses2]
+
+
+# combine all doacs categories into doac
+dat2$ac3mo2 <- with(dat2, ifelse(ac3mo %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", ac3mo))
+dat2[, ac3mo2 := as.factor(ac3mo2)]
+dat2 <- within(dat2, ac3mo2 <- relevel(ac3mo2, ref = "LMWH"))
+
+dat2$ac4mo2 <- with(dat2, ifelse(ac4mo %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", ac4mo))
+dat2[, ac4mo2 := as.factor(ac4mo2)]
+dat2 <- within(dat2, ac4mo2 <- relevel(ac4mo2, ref = "LMWH"))
+
+
+# unwrap combined index VTE types into columns of binary indicators
+vte_info <- read_excel("../../data/prog8_vte.xlsx", sheet = "raw_VTE_POS")
+vte_info2 <- unique(data.table(vte_info)[!is.na(VTE_type),.(patid, VTE_type)])
+vte <- model.matrix(patid~VTE_type+0, data=vte_info2)
+colnames(vte) <- gsub("type", "", colnames(vte))
+vte2 <- data.frame(cbind(vte_info2[,1], vte))
+vte3 <- aggregate(. ~ patid, vte2, sum)
+dat2 <- merge(x=dat2, y=vte3, by="patid", all.x = TRUE)
+rm(vte_info, vte_info2, vte, vte2, vte3)
+
+# combine the 3 rarest VTE types
+dat2[,VTE_ivc_rv_pv:= as.numeric((VTE_IVC | VTE_Portal.vein | VTE_Renal.vein))]
+
+comorb_names <- colnames(dat2)[grep("comorbidity", colnames(dat2))]
+dat2[, (comorb_names) := lapply(.SD, function(x) ifelse(is.na(x), 0, x)), .SDcols = comorb_names]
+dat2[,comorb01 := !is.na(comorbidities)]
+# count the number of comorbidities
+dat2[, ("n_comorb") := rowSums(.SD), .SDcols=comorb_names]
+# summary(dat2$n_comorb)
+
+dat2[, race := ifelse(race=="", "U", race)]
+
+antip_names <- colnames(dat2)[grep("antiplatelet", colnames(dat2))]
+dat2[, (antip_names) := lapply(.SD, function(x) ifelse(is.na(x), 0, x)), .SDcols = antip_names]
+dat2[, ("antiplatelet") := (rowSums(.SD) > 0), .SDcols=antip_names]
+
+dat2[,c("race", "division", "product", "education", "fed_poverty","income_range", "networth_range", "occupation")] <- lapply(dat2[,c("race", "division", "product", "education", "fed_poverty","income_range", "networth_range", "occupation")], as.factor)
+
+# pdf("a1_hist_n_comorbidities.pdf")
+# hist(dat2$n_comorb, main="Histogram of number of comorbidities",
+     # xlab="Number of comorbidities")
+# dev.off()
+
+# scaled age
+dat2$age_s <- scale(dat2$age)
+# center age by mean
+dat2$age_c <- dat2$age - mean(dat2$age)
+
+# combine the smallest education level to the next level
+dat2[,education2 := as.factor(ifelse(as.character(education) %in% c("B", "A"), "AB", as.character(education)))]
+
+# use the largest level as the reference level
+dat2 <- within(dat2, education <- relevel(education, ref = "C"))
+dat2 <- within(dat2, education2 <- relevel(education2, ref = "C"))
+dat2 <- within(dat2, race <- relevel(race, ref = "W"))
+dat2 <- within(dat2, income_range <- relevel(income_range, ref = "6"))
+dat2 <- within(dat2, product <- relevel(product, ref = "HMO"))
+
+# combine asian and hispanic for race
+dat2[,race2 := as.factor(ifelse(as.character(race) %in% c("H", "A"), "AsianHispanic", as.character(race)))]
+
+# combine regions for division
+dat2 <- data.table(dat2 %>%
+  mutate(division2 = case_when(
+    division %in% c("WEST SOUTH CENTRAL", "WEST NORTH CENTRAL") ~ "WEST CENTRAL",
+    division %in% c("EAST SOUTH CENTRAL", "EAST NORTH CENTRAL") ~ "EAST CENTRAL",
+    division %in% c("SOUTH ATLANTIC", "MIDDLE ATLANTIC", "NEW ENGLAND") ~ "ATLANTIC_ENGLAND",
+    division %in% c("MOUNTAIN", "PACIFIC") ~ "MOUNTAIN_PACIFIC",
+    TRUE ~ "UNKNOWN"
+  )))
+
+# combine insurace type
+dat2[,product2 := as.factor(ifelse(as.character(product) %in% c("EPO", "IND", "PPO"), "EPO_IND_PPO", as.character(product)))]
+dat2 <- within(dat2, product2 <- relevel(product2, ref = "HMO"))
+
+# obtain variable names for index VTE types
+# all distinct VTE categories
+vte_names0 <- colnames(dat2)[grep("VTE_", colnames(dat2))]
+vte_names1 <- vte_names0[-which(vte_names0 %in% c("VTE_IVC","VTE_Portal.vein", "VTE_Renal.vein"))]
+
+
+# Add combined malignancies
+malignancy_names <- colnames(dat2)[grep("malignancy_", colnames(dat2))]
+
+
+# remove people who have Other AC
+data_ac3mo <- dat2[!ac3mo %in% c("Other", "Not captured"),]
+data_ac3mo$ac3mo2 <- factor(data_ac3mo$ac3mo2)
+
+data_ac4mo <- dat2[!ac4mo %in% c("Other", "Not captured"),]
+data_ac4mo$ac4mo2 <- factor(data_ac4mo$ac4mo2)
+
+round_pvalues <- function(x){
+  if (x < 0.0001) return("<0.0001") else if (0.0001 <= x & x < 0.001)
+    return("<0.001") else if (0.001 <= x) return(round(x, 3))
+}
+
+create_coefficients_table <- function(model, title_index){
+  s <- summary(model)
+
+  s_coef <- round(data.matrix(s$coefficients), 3)
+  s_se <- round(data.matrix(s$standard.errors), 3)
+  
+  z <- s$coefficients/s$standard.errors
+  # 2-tailed Wald z tests to test significance of coefficients
+  p <- data.matrix(sapply((1-pnorm(abs(z), 0, 1))*2, round_pvalues))
+  s_coef_exp <- round(exp(s_coef),3)
+    
+  coef_table <- t(matrix(paste0(s_coef, "±", s_se, " (", p, ")", "\\\n", s_coef_exp), nrow=3))
+  colnames(coef_table) <- rownames(s_coef)
+  rownames(coef_table) <- colnames(s_coef)
+  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: coefficient ± standard error (p-value from Wald test) \\\n \\\t \\\t exponentiated coefficient")
+  kable(coef_table, format="html", caption = title_name1) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"))
+  
+}
+```
+
+
+# Multinomial logistic regression on AC at 3 months
+
+## Model 1:
+$\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+i.e. LMWH is the reference level for AC3Mo.
+
+```{r echo=FALSE}
+fm1 <- as.formula(paste("ac3mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized"))
+fit1 <- multinom(fm1, data=data_ac3mo, trace=FALSE)
+create_coefficients_table(fit1, "1")
+```
+
+
+
+## Model 2:
+$\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm2 <- as.formula(paste("ac3mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division"))
+fit2 <- multinom(fm2, data=data_ac3mo, trace=FALSE)
+create_coefficients_table(fit2, "2")
+```
+
+
+## Model 3:
+$\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm3 <- as.formula(paste("ac3mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division + education2 + income_range + race"))
+fit3 <- multinom(fm3, data=data_ac3mo, trace=FALSE)
+create_coefficients_table(fit3, "3")
+```
+
+
+
+## Model 4:
+$\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race + product, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm4 <- as.formula(paste("ac3mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division + education2 + income_range + race + product"))
+fit4 <- multinom(fm4, data=data_ac3mo, trace=FALSE)
+create_coefficients_table(fit4, "4")
+```
+
+
+**Notes on interpreting the results**
+
+We focus on the largest model, Model 4.
+
+- An example of interpreting the coefficients: The exponentiated coefficient of "VTE_Lower.extremity.DVT" for warfarin is 1.24. This means that the probability of AC3Mo being warfarin is 1.24 times the probability of AC3Mo being LMWH for a patient with LE as index VTE type, holding all other covariates constant.
+
+- The model considers multiple index VTE types and multiple malignancies. For example, Let's consider a multiple VTE types case. The exponentiated coefficient of "VTE_Pulmonary.embolism" for warfarin is 0.879. The two exponentiated coefficients mean that the probability of AC3Mo being warfarin is 1.24*0.879 = 1.090 times the probability of AC3Mo being LMWH for a patient with both LE and PE, holding all other covariates constant.
+
+- Controlling for all other covariates, the probability of AC3Mo being DOACs is always lower than the probability of AC3Mo being LMWH, regardless of what index VTE type(s) a patient has. The probability of AC3MO being warfarin is lower than that of LMWH among patients having PE and patients with IVC_RV_PV. For patients with LE and PE simutaneously, the probability of AC3Mo being DOACs is 0.966\*0.832 = 0.804 times that being LMWH, while the probability of AAC3Mo being warfarin is 1.24\*0.716 = 0.888 times that being LMWH.
+
+- The exponentiated coefficients of malignancies except for hematologic are either both positive for DOACs and warfarin, or both negative for DOACs and warfarin. For example, the probability of AC3Mo being DOACs is 0.411 times that of LMWH among patients having Brain.CNS as maglinancy, and the probability of AC3Mo being warfarin is 0.476 times that of LMWH among patients having Brain.CNS as malignancy. The corresponding numbers are 1.438 and 1.528 among patients having Breat cancer as malignancy. This implies that the influence on the probability of AC3Mo being DOACs attributed to malignancies except for hematologic, is in the same direction of the influence on the probability of AC3Mo being warfarin.
+
+- The probability of AC3Mo being DOACs is 1.007 times the probability of AC3Mo being LMWH per point increase in Charlson comorbidity score. The corresponding number of warfarin over LMWH is 1.058. Both are not significant increases. 
+
+- Patients with a VTE history are slightly less likely (0.851) to get DOACs at 3 months than to get LMWH, but are more likely (1.179) to get warfarin at 3 months than to get LMWH, holding other covariates constant. 
+
+- Hospitalization slightly decreases the probability of DOACs (0.799) or warfarin (0.952) at 3 months, compared to LMWH, holding other covariates constant.
+
+- Compared to patients in east north central region, the relative probability of AC3Mo being DOACs over LMWH is 147.4\% (2.474 - 1 = 1.474) higher than patients in east south central region, 39.9\% (1.399 - 1 = 0.399) higher than patients in south central region, but 75.5\% (0.245 - 1 = -0.755) lower than patients in new England region, holding other covariates constant. Compared to patients in east north central region, the relative probability of AC3Mo being DOACs over LMWH is 147.4\% (2.474 - 1 = 1.474) higher than patients in east south central region, 59.2\% (1.592 - 1 = 0.592) higher than patients in south central region, but 48.1\% (0.519 - 1 = -0.481) lower than patients in new England region, holding other covariates constant. 
+
+- Compared to patients having education level <Bachelor degree, the relative probability of AC3Mo being DOACs over LMWH is 22.3\% (0.777 - 1 = -0.223) lower than patients having Bachelor degree +, holding other covariates constant.  Compared to patients having education level <Bachelor degree, the relative probability of AC3Mo being warfarin over LMWH is 21.7\% (0.783 - 1 = -0.217) lower than patients having Bachelor degree +, holding other covariates constant.
+
+- Compared to patients in household income level \$100K+, the relative probability of AC3Mo being warfarin over LMWH is higher than patients in any other household income levels, holding other covariates constant. But compared to patients having household income level \$100K+, the relative probability of AC3Mo being DOACs over LMWH is not much different than that among patients in other household income level. 
+
+- Compared to white patients, the relative probability of AC3Mo being DOACs over LMWH is lower than patients of any other races but unknown, holding other covariates constant. Compared to white patients, the relative probability of AC3Mo being warfarin over LMWH is lower than patients of any other races, holding other covariates constant. 
+
+
+
+
+# Multinomial logistic regression on AC at 4 months
+
+## Model 1:
+$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+i.e. LMWH is the reference level for AC3Mo.
+
+```{r echo=FALSE}
+fm1_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized"))
+fit1_4mo <- multinom(fm1_4mo, data=data_ac4mo, trace=FALSE)
+create_coefficients_table(fit1_4mo, "1")
+```
+
+
+
+## Model 2:
+$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm2_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division"))
+fit2_4mo <- multinom(fm2_4mo, data=data_ac4mo, trace=FALSE)
+create_coefficients_table(fit2_4mo, "2")
+```
+
+
+## Model 3:
+$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm3_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division + education2 + income_range + race"))
+fit3_4mo <- multinom(fm3_4mo, data=data_ac4mo, trace=FALSE)
+create_coefficients_table(fit3_4mo, "3")
+```
+
+
+
+## Model 4:
+$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ index\_vte\_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race + product, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
+
+```{r echo=FALSE}
+fm4_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + vte_history + hospitalized + division + education2 + income_range + race + product"))
+fit4_4mo <- multinom(fm4_4mo, data=data_ac4mo, trace=FALSE)
+create_coefficients_table(fit4_4mo, "4")
+```
+
+
+
+

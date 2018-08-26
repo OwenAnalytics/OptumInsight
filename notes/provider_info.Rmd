@@ -1,0 +1,195 @@
+---
+title: "checking for provider information"
+output: slidy_presentation
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/prep')
+
+library(sas7bdat)
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(knitr)
+library(kableExtra)
+```
+
+## head(provider)
+
+```{r}
+provider <- data.table(fread("../data/prog12_prov.txt",
+                       colClasses=c("character","character","Date","character",
+                                    "character","numeric", "integer",
+                                    "numeric","character","character", "character",
+                                    "integer",
+                                    "character","character", "integer", "character",
+                                    "character","character","character", "character",
+                                    "character","character")))
+names(provider) <- tolower(names(provider))
+
+knitr::kable(head(provider)) %>%
+    kable_styling(latex_options = c("striped", "scale_down"), font_size = 14)
+```
+
+
+## 3 types
+
+```{r echo=TRUE}
+npi <- c("X1", "X2", "X3", "X3", "X3")
+prov_unique <- c(0, NA, 34567, 24680, 0)
+prov_cat <- c(0000, NA, 5018, 5957, 0000)
+demo <- data.frame(npi, prov_unique, prov_cat)
+
+knitr::kable(demo, format = "html", caption = "Three types of provider information structures") %>%
+  kable_styling(full_width = F, latex_options = c("striped"), position = "center") %>%
+  row_spec(1, background = "sandybrown") %>%
+  row_spec(2, background = "palevioletred") %>%
+  row_spec(3:5, background = "orangered") %>%
+  column_spec(1:3, width = "4cm")
+```
+
+
+
+
+## NPI
+
+### Histogram of anticoagulant fills with missing NPI
+Missing NPI is defined as having values ""(empty), "L", or "LLLLLLLLLL".
+
+```{r}
+provider2 <- provider[, npi_miss := (npi2 %in% c("missing", "trivial"))]
+
+# number of missing NPI
+x_npi <- provider2[npi_miss==TRUE, .N]
+x_npi
+
+# total number of anticoagulant prescriptions
+n_npi <- provider2[, .N]
+n_npi
+
+# proportion of patients having missing prov_unique
+x_npi / n_npi
+```
+
+
+```{r}
+prop_npi <- provider2[,sum(npi_miss)/.N, by=patid]
+hist(prop_npi$V1, breaks = 15, xlab = "Proportion", main = "Proportion of missing NPI among anticoagulant prescriptions")
+```
+
+
+## Individual level provider information
+
+### Proportion of anticoagulant fills with missing prov\_unique.
+
+```{r}
+provider2 <- provider2[, prov_miss := ( is.na(prov_unique))]
+prop_pres <- provider2[,sum(prov_miss)/.N, by=patid]
+hist(prop_pres$V1, breaks = 15, xlab = "Proportion", main = "Proportion of missing prov_unique among anticoagulant prescriptions")
+```
+
+
+## Histogram of at least one missing prov_unique.
+```{r}
+# number of patients having missing prov_unique
+length(unique(prop_pres[V1!=0,patid]))
+
+# total number of patients
+length(unique(provider2$patid))
+
+# proportion of patients having missing prov_unique
+length(unique(prop_pres[V1!=0,patid])) / length(unique(provider2$patid))
+```
+
+
+```{r}
+hist(prop_pres[V1!=0,V1], breaks = 15, xlab = "Proportion", main = "Proportion of at leat one missing prov_unique among anticoagulant prescriptions")
+```
+
+
+
+## One NPI corresponds to multiple prov_unique's
+```{r}
+p_unique <- provider2[, .N,by=.(patid, clmid, npi2)]
+
+p_unique_multi <- p_unique[N>1,]
+
+# number of NPI having more than 1 prov_unique
+length(unique(p_unique_multi$npi2))
+
+length(unique(p_unique_multi$patid))
+```
+
+```{r}
+p_unique <- p_unique[, nobs := .N, , by=patid][, prop := N/nobs]
+max(p_unique$prop)
+hist(p_unique$prop, breaks = 5, main = "Proportion of NPI's having multiple prov_unique", xlab = "Proportion")
+```
+
+
+
+## Population level provider information
+
+```{r}
+# the number of AC prescriptions with npi having missing prov_unique
+provider2[,sum(prov_miss)]
+
+# total number of AC prescriptions of all patients
+provider2[,.N]
+
+# proportion of AC prescriptions with missing prov_unique
+provider2[,sum(prov_miss)/.N]
+```
+
+
+
+
+## Example 1
+
+Non-trivial NPI corresponds to a missing prov_unique
+
+```{r echo = TRUE}
+knitr::kable(provider[patid=="802666500415835"]) %>%
+    kable_styling(latex_options = c("striped", "scale_down"), font_size = 14)
+```
+
+
+
+## Example 2
+
+This patient got one drug in one day, but the corresponding NPI matches different prov_unique.
+
+```{r echo = TRUE}
+knitr::kable(provider[patid=="802666507718624"]) %>%
+    kable_styling(latex_options = c("striped", "scale_down"), font_size = 14)
+```
+
+
+## Example 3
+
+This patient did not have a valid prov_unique at either index AC or AC3Mo.
+
+```{r echo = TRUE}
+knitr::kable(provider[patid=="802666506295533"]) %>% 
+    kable_styling(latex_options = c("striped", "scale_down"), font_size = 14)
+```
+
+
+
+
+## Example 4
+This patient got one drug in one day with differnt NPI's, which match different prov_unique.
+
+```{r echo = TRUE}
+knitr::kable(provider[patid=="802666509497634"]) %>%
+    kable_styling(latex_options = c("striped", "scale_down"), font_size = 14)
+```
+
+
+
+
+
+
+
