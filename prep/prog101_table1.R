@@ -34,7 +34,7 @@ add_wb <- function(sheetnm, data, rownm = FALSE){
   addDataFrame(data, sheet, row.names = rownm) 
 }
 
-analysis_data <- data.table(readRDS("../data/prog100_analysis_data.rds"))
+analysis_data <- data.table(readRDS("../data/analysis_data.rds"))
 # SELECT DISTINCT ROWS
 analysis_data2 <- analysis_data %>% distinct(patid, .keep_all=TRUE)
 

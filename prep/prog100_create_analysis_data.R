@@ -840,9 +840,10 @@ data10 <- merge(x=data9, y=bmi_info, by="patid", all.x=TRUE)
 # SAVE TEMPORARILY
 # wb <- createWorkbook(type = "xlsx")
 saveRDS(data10, "../data/prog100_analysis_data.rds")
-
+write.table(data10, "../data/prog100_analysis_data.txt", sep="\t")
+ 
 # wb <- loadWorkbook("../data/prog100_analysis_data.xlsx")
-# add_wb(sheetnm = "prog100_analysis_data", data = data9)
+# add_wb(sheetnm = "prog100_analysis_data", data = data10)
 # saveWorkbook(wb, "../data/prog100_analysis_data.xlsx")
 
 

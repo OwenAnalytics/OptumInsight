@@ -35,7 +35,7 @@ patinfo[,c("fill_dt","index_dt","index_cancer_dt")] <-
   lapply(patinfo[,c("fill_dt","index_dt","index_cancer_dt")], as.Date)
 
 
-### 1. EXCLUDE PATIENTS WHO DO NOT GET AN OUTPATIENT AC WITHIN 90 DAYS --------
+### 1. EXCLUDE PATIENTS WHO DO NOT GET AN OUTPATIENT AC WITHIN 30 DAYS --------
 
 checkAC <- function(end_dt){
   # KEEP ROWS WITH AC WITHIN end_dt DAYS AFTER INDEX VTE

@@ -2,9 +2,12 @@
 *.Rout
 /*.RData
 *.Rhistory
-*data/
-!data/prog101_nobs_counts
-!data/prog101_table1_stats.png
+
+data/*
+!data/analysis_data_example*.PNG
+
+data/prog101_nobs_counts
+data/prog101_table1_stats.png
 *archive/
 *rsconnect/
 checklist.txt
