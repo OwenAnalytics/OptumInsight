@@ -56,7 +56,7 @@ checkAC <- function(end_dt){
 patinfo2 <- checkAC(end_dt = 30)
 print(paste("The number of eligible patients who got an AC within 30 days after index VTE date is",
       nlevels(as.factor(patinfo2$patid)) ) ) # 14945
-print(paste("The number of rows in the data set is", nrow(patinfo2))) # 168355
+print(paste("The number of rows in the data set is", nrow(patinfo2))) # 171050
 
 
 

@@ -120,7 +120,8 @@ patinfo2 <- patinfo %>%
   ungroup() %>%
   arrange(patid, fill_dt, brand_name)
 
-
+print(paste("After summing copays on the same AC, the number of rows in the data set is",
+            nrow(patinfo2))) # 168355
 
 
 ### 2. KEEP ONLY AC PRESCRIBED ON OR AFTER INDEX VTE DATE -------------------
@@ -128,7 +129,7 @@ patinfo3 <- patinfo2 %>% filter(fill_dt >= index_dt)
 
 print(paste("The number of eligible patients with a fill date after index VTE is ",
             nlevels(as.factor(patinfo3$patid)) ) ) #14945
-print(paste("After summing copays on the same AC, the number of rows in the data set is ",
+print(paste("After excluding AC prescribed before indexVTE, the number of rows in the data set is ",
             nrow(patinfo3))) # 134340
 
 
