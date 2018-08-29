@@ -210,7 +210,7 @@ create_coefficients_table <- function(model, title_index){
   coef_table <- t(matrix(paste0(s_coef, "±", s_se, " (", p, ")", "\\\n", s_coef_exp), nrow=3))
   colnames(coef_table) <- rownames(s_coef)
   rownames(coef_table) <- colnames(s_coef)
-  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: coefficient ? standard error (p-value from Wald test) \\\n \\\t \\\t \\\t \\\t exponentiated coefficient")
+  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: coefficient ± standard error (p-value from Wald test) \\\n \\\t \\\t \\\t \\\t exponentiated coefficient")
   kable(coef_table, format="html", caption = title_name1) %>%
     kable_styling(bootstrap_options = c("striped", "hover"))
   
@@ -278,27 +278,27 @@ create_coefficients_table(fit5, "5")
 
 We focus on the largest model, Model 4.
 
-- An example of interpreting the coefficients: The exponentiated coefficient of "VTE_Lower.extremity.DVT" for warfarin is 1.24. This means that the probability of AC3Mo being warfarin is 1.24 times the probability of AC3Mo being LMWH for a patient with LE as index VTE type, holding all other covariates constant.
+- An example of interpreting the coefficients: The exponentiated coefficient of "VTE_Lower.extremity.DVT" for warfarin is 1.231. This means that the probability of AC3Mo being warfarin is 1.231 times the probability of AC3Mo being LMWH for a patient with LE as index VTE type, holding all other covariates constant.
 
-- The model considers multiple index VTE types and multiple malignancies. For example, Let's consider a multiple VTE types case. The exponentiated coefficient of "VTE_Pulmonary.embolism" for warfarin is 0.879. The two exponentiated coefficients mean that the probability of AC3Mo being warfarin is 1.24*0.879 = 1.090 times the probability of AC3Mo being LMWH for a patient with both LE and PE, holding all other covariates constant.
+- The model considers multiple index VTE types and multiple malignancies. For example, Let's consider a multiple VTE types case. The exponentiated coefficient of "VTE_Pulmonary.embolism" for warfarin is 0.834. Along with 1.231 from the previous point, the probability of AC3Mo being warfarin is 1.231\*0.834 = 1.027 times the probability of AC3Mo being LMWH for a patient with both LE and PE, holding all other covariates constant.
 
-- Controlling for all other covariates, the probability of AC3Mo being DOACs is always lower than the probability of AC3Mo being LMWH, regardless of what index VTE type(s) a patient has. The probability of AC3MO being warfarin is lower than that of LMWH among patients having PE and patients with IVC_RV_PV. For patients with LE and PE simutaneously, the probability of AC3Mo being DOACs is 0.966\*0.832 = 0.804 times that being LMWH, while the probability of AAC3Mo being warfarin is 1.24\*0.716 = 0.888 times that being LMWH.
+- Controlling for all other covariates, having any index VTE types decreases the relative probability of AC3Mo being DOAC compared to LMWH because all coefficients of DOAC are negative. In addition, having any of PE, UE, or ivc_rv_pv lowers the relative probability of AC3Mo being Warfarin compared to LMWH. For example,
+for a patient with PE and UE simutaneously, the probability of AC3Mo being DOAC is 0.834\*0.915 = 0.763 times that being LMWH. Similarly, for a patient with the same condition, the probability of AC3Mo being warfarin is 0.88\*0.918 = 0.808 times that being LMWH.
 
-- The exponentiated coefficients of malignancies except for hematologic are either both positive for DOACs and warfarin, or both negative for DOACs and warfarin. For example, the probability of AC3Mo being DOACs is 0.411 times that of LMWH among patients having Brain.CNS as maglinancy, and the probability of AC3Mo being warfarin is 0.476 times that of LMWH among patients having Brain.CNS as malignancy. The corresponding numbers are 1.438 and 1.528 among patients having Breat cancer as malignancy. This implies that the influence on the probability of AC3Mo being DOACs attributed to malignancies except for hematologic, is in the same direction of the influence on the probability of AC3Mo being warfarin.
+- Patients with a VTE history are slightly less likely (0.786) to get DOAC at 3 months compared to LMWH, but are more likely (1.251) to get warfarin at 3 months than to get LMWH, holding other covariates constant. 
 
-- The probability of AC3Mo being DOACs is 1.007 times the probability of AC3Mo being LMWH per point increase in Charlson comorbidity score. The corresponding number of warfarin over LMWH is 1.058. Both are not significant increases. 
+- Hospitalization decreases the probability of DOAC (0.845) or warfarin (0.75) at 3 months, compared to LMWH, holding other covariates constant.
 
-- Patients with a VTE history are slightly less likely (0.851) to get DOACs at 3 months than to get LMWH, but are more likely (1.179) to get warfarin at 3 months than to get LMWH, holding other covariates constant. 
+- The coefficients of malignancy_cancerName are either positive or negative simultaneously for DOAC and Warfarin, except for malignancy_Hematologic. Hence having any malignancy type but hematologic changes the relative probability of DOAC and Warfarin, compared to LMWH, in the same direction. For a specific example, controlling for all other covariates, the probability of AC3Mo being DOACs is 0.404 times that of LMWH among patients having Brain.CNS as maglinancy, and the probability of AC3Mo being Warfarin is 0.498 times that of LMWH among patients having Brain.CNS as malignancy. 
 
-- Hospitalization slightly decreases the probability of DOACs (0.799) or warfarin (0.952) at 3 months, compared to LMWH, holding other covariates constant.
+- Per point increase in Charlson comorbidity score increases the relative probability of AC3Mo being DOAC compared to LMWH by 1.005 times, and that of Warfarin by 1.05 times. Both are very close to 1.
 
-- Compared to patients in east north central region, the relative probability of AC3Mo being DOACs over LMWH is 147.4\% (2.474 - 1 = 1.474) higher than patients in east south central region, 39.9\% (1.399 - 1 = 0.399) higher than patients in south central region, but 75.5\% (0.245 - 1 = -0.755) lower than patients in new England region, holding other covariates constant. Compared to patients in east north central region, the relative probability of AC3Mo being DOACs over LMWH is 147.4\% (2.474 - 1 = 1.474) higher than patients in east south central region, 59.2\% (1.592 - 1 = 0.592) higher than patients in south central region, but 48.1\% (0.519 - 1 = -0.481) lower than patients in new England region, holding other covariates constant. 
+- The coefficients of division are either positive or negative simultaneously for DOAC and Warfarin, except for divisionSOUTH ATLANTIC and divisionUNKNOWN. Hence being in any region but SOUTH ATLANTIC and UNKNOWN changes the relative probability of DOAC and Warfarin, compared to LMWH, in the same direction. Specifically, people in EAST SOUTH CENTRAL are much more likely to have DOAC (2.487) and Warfarin (1.829) at 3 months compared to LMWH. On the other hand people in New England are much less likely to have DOAC (0.287) and Warfarin (0.476) at 3 months compared to LMWH, holding all other covariates constant. 
 
-- Compared to patients having education level <Bachelor degree, the relative probability of AC3Mo being DOACs over LMWH is 22.3\% (0.777 - 1 = -0.223) lower than patients having Bachelor degree +, holding other covariates constant.  Compared to patients having education level <Bachelor degree, the relative probability of AC3Mo being warfarin over LMWH is 21.7\% (0.783 - 1 = -0.217) lower than patients having Bachelor degree +, holding other covariates constant.
+- Compared to patients having education level <Bachelor degree, having Bachelor degree + decreases the relative probability of AC3Mo being DOAC compared to LMWH by 0.773 times. Similarly, compared to patients having education level <Bachelor degree, having Bachelor degree + decreases the relative probability of AC3Mo being Warfarin compared to LMWH by 0.848 times, holding other covariates constant.
 
-- Compared to patients in household income level \$100K+, the relative probability of AC3Mo being warfarin over LMWH is higher than patients in any other household income levels, holding other covariates constant. But compared to patients having household income level \$100K+, the relative probability of AC3Mo being DOACs over LMWH is not much different than that among patients in other household income level. 
+- Compared to patients in household income level \$100K+, having any other household income levels increases the relative probability of AC3Mo being Warfarin compared to LMWH because all coefficients for Warfarin are positive. On the other hand, having any other household income levels does not seem to change much the relative probability of AC3Mo being DOAC compared to LMWH because all coefficients are close to 0, no matter positive or negative.
 
-- Compared to white patients, the relative probability of AC3Mo being DOACs over LMWH is lower than patients of any other races but unknown, holding other covariates constant. Compared to white patients, the relative probability of AC3Mo being warfarin over LMWH is lower than patients of any other races, holding other covariates constant. 
 
 
 
