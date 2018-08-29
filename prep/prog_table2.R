@@ -16,7 +16,7 @@
 #' 14. POS CODES (TBD)
 #######################################################################################
 
-setwd("C:/Users/Mengbing Li/Box Sync/OptumInsight_DataManagement/prep")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/prep")
 
 library(dplyr)
 library(tidyr)
@@ -30,7 +30,7 @@ add_wb <- function(sheetnm, data, rownm = FALSE){
   addDataFrame(data, sheet, row.names = rownm) 
 }
 
-analysis_data <- data.table(readRDS("../data/prog100_analysis_data.rds"))
+analysis_data <- data.table(readRDS("../data/analysis_data.rds"))
 # SELECT DISTINCT ROWS
 analysis_data2 <- analysis_data %>% distinct(patid, .keep_all=TRUE)
 
@@ -46,7 +46,7 @@ analysis_data2[, (ses2) := lapply(.SD, function(x) ifelse(is.na(x), "0", x)), .S
 
 # OBTAIN ONLY TIME INVARIANT COVARIATES
 # analysis_data2 <- analysis_data %>%
-#   distinct(patid, outcome, .keep_all = TRUE) %>%
+#   distinct(patid, ac3mo, .keep_all = TRUE) %>%
 #   mutate(race = ifelse(race=="", "U", race))
 
 # OUTPUT PATIENTS WHO GOT MULTIPLE AC ON THE FIRST FILL DATE AFTER INDEX VTE
@@ -164,7 +164,7 @@ table_calculate <- function(colvar){
   
   table2_insurance <- table2_tab(analysis_data2, "product", colvar, NULL, "Insruance")
 
-  table2_copay <- table2_tab(analysis_data2, "outcome_copay_rng", colvar,
+  table2_copay <- table2_tab(analysis_data2, "ac3mo_copay_rng", colvar,
                             c("<$10", "$10-30", "$100-250", "$250-500", 
                               "$30.01-50", "$50.01-100", 
                               "$>500", "Undefined"), "Copay")
@@ -183,12 +183,12 @@ table_calculate <- function(colvar){
 # CALCULATE COUNTS BY INDEX AC AND OUTCOME RESPECTIVELY
 table2_indexac <- table_calculate("index_ac")
 
-table2_outcome <- table_calculate("outcome")
+table2_ac3mo <- table_calculate("ac3mo")
 
 # COMBINE THE COUNTS
 gap_col <- as.matrix(rep(NA, nrow(table2_indexac)), ncol=1)
-colnames(gap_col)[1] <- "Left: Index AC; \n Right: Outcome"
-table2 <- cbind(table2_indexac, gap_col, table2_outcome)
+colnames(gap_col)[1] <- "Left: Index AC; \n Right: AC3MO"
+table2 <- cbind(table2_indexac, gap_col, table2_ac3mo)
 
 
 
@@ -210,16 +210,16 @@ saveWorkbook(wb, "../data/summary_stats.xlsx")
 
 
 ## Add summary statistics of copay to table 2
-analysis_data2$outcome2 <- with(analysis_data2,
-  ifelse(outcome %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"),
-         "DOAC", outcome))
+analysis_data2$ac3mo2 <- with(analysis_data2,
+  ifelse(ac3mo %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"),
+         "DOAC", ac3mo))
 summary_copay <- data.frame(analysis_data2 %>%
-  group_by(outcome2) %>%
-  summarise("Mean "=mean(outcome_copay),
-            "Median"=median(outcome_copay),
-            "Standard Deviation"=sd(outcome_copay),
-            "Min"=min(outcome_copay),
-            "Max"=max(outcome_copay)))
+  group_by(ac3mo2) %>%
+  summarise("Mean "=mean(ac3mo_copay),
+            "Median"=median(ac3mo_copay),
+            "Standard Deviation"=sd(ac3mo_copay),
+            "Min"=min(ac3mo_copay),
+            "Max"=max(ac3mo_copay)))
 
 
 # SAVE TO EXCEL

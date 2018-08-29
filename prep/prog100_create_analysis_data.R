@@ -763,7 +763,7 @@ analysis_data6 <- merge(x=analysis_data5, y=ses_member[,-"race_ses"], by="patid"
 data7 <- data.table(analysis_data6)
   
 # SUM UP COPAYS OF INDEX AC AND ACMO3
-acpay1 <- data7[index_ac==gen_name & index_ac_dt==fill_dt,
+acpay1 <- data7[index_ac_dt==fill_dt, # index_ac==gen_name & 
             .("index_ac_copay"=sum(copay_sum)), by=patid]
 # acpay1 <- data7[index_ac==gen_name & index_ac_dt==fill_dt,
 #              .("index_ac_copay"=sum(copay_sum), days_sup, quantity, strength), by=patid][
@@ -772,11 +772,11 @@ acpay1 <- data7[index_ac==gen_name & index_ac_dt==fill_dt,
 # acpay2 <- acpay1[,"index_ac_strength_num":=gsub("[M[:punct:]].*$", "", strength)]
 data8 <- merge(x=data7, y=acpay1, by="patid", all.x = TRUE)
 
-acpay_3mo <- data7[ac3mo==gen_name & ac3mo_dt==fill_dt,
+acpay_3mo <- data7[ac3mo_dt==fill_dt, #ac3mo==gen_name & 
                 .("ac3mo_copay"=sum(copay_sum)), by=patid]
 data8 <- merge(x=data8, y=acpay_3mo, by="patid", all.x = TRUE)
 
-acpay_4mo <- data7[ac4mo==gen_name & ac4mo_dt==fill_dt,
+acpay_4mo <- data7[ac4mo_dt==fill_dt, #ac4mo==gen_name & 
                    .("ac4mo_copay"=sum(copay_sum)), by=patid]
 data8 <- merge(x=data8, y=acpay_4mo, by="patid", all.x = TRUE)
 
@@ -839,8 +839,8 @@ data10 <- merge(x=data9, y=bmi_info, by="patid", all.x=TRUE)
 
 # SAVE TEMPORARILY
 # wb <- createWorkbook(type = "xlsx")
-saveRDS(data10, "../data/prog100_analysis_data.rds")
-write.table(data10, "../data/prog100_analysis_data.txt", sep="\t")
+saveRDS(data10, "../data/analysis_data.rds")
+write.table(data10, "../data/analysis_data.txt", sep="\t")
  
 # wb <- loadWorkbook("../data/prog100_analysis_data.xlsx")
 # add_wb(sheetnm = "prog100_analysis_data", data = data10)

@@ -26,7 +26,7 @@ library(xlsx)
 library(readxl)
 library(data.table)
 
-analysis_data <- data.table(readRDS("../data/prog100_analysis_data.rds"))
+analysis_data <- data.table(readRDS("../data/analysis_data.rds"))
 
 add_wb <- function(sheetnm, data, rownm = FALSE){
   removeSheet(wb, sheetName=sheetnm) # replace with new data frame

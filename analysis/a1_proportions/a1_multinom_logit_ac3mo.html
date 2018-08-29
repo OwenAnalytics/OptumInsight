@@ -123,49 +123,54 @@ $(document).ready(function () {
 </div>
 
 
-<div id="summary" class="section level1">
-<h1>Summary:</h1>
-<p>At 3 months, people with “Other” and “Not captured”. Sample size = 12652.</p>
-<p>In sensitivity analysis, at 4 months people with “Other” and “Not captured”. Sample size = 10134.</p>
+<div id="summary" class="section level2">
+<h2>Summary:</h2>
+<p>At 3 months, people with “Other” and “Not captured” are removed. Remaining sample size = 12,652.</p>
+<p>In sensitivity analysis, at 4 months people with “Other” and “Not captured” are removed. Remaining sample size = 10,134.</p>
 <p>Note that patients used in the sensitivity analysis is a subset of the analysis at 3 months.</p>
-<div id="about-the-covariates" class="section level2">
-<h2>About the covariates</h2>
-<p>The following describes the process of selecting variables into the regression model, and gives reasons to why certain variables are not included in the model.</p>
+<div id="about-the-covariates" class="section level3">
+<h3>About the covariates</h3>
+<p>The following argues why certain variables are not included in the regression model.</p>
 <ul>
-<li><p>In all SES variables including race, education, federal poverty level, home ownership, occupation, income, networth, and division, all NA values are coded as the same as the unknown level (“0” or “U”). \ In the source data, race has values U, A, H, W, B, and “” (blank), where U means “Unknown”. Networth range has values 0, 1, 2, 3, 4, 5, and “” (blank), where 0 means “Unknown”. In the model, all blank values are filled in with the unknown level coding “U” or “0”. In the end, race only has values U, A, H, W, and B; networth range only has values 0,1,2,3,4,5. Variables having a level “Unknown” and having blank values are modified in this way. Such variables include race, education, federal poverty level, home ownership, occupation, income, networth range, and division. \ A patient may either have no NAs in any of these 8 SES variables, or have NAs in all of these SES variables. 375 patients (2.51%) have NAs in the SES variables.</p></li>
-<li><p>Federal poverty level only has 3 levels “Above 400% FPL”, “Below 400% FPL”, and “Unkown”, and very few people ($$3) have “Below 400% FPL”. Thus fed_poverty is not used.</p></li>
-<li><p>Home ownership only has “probable homeowner” and “unknown”. This does not provide useful information so is not used.</p></li>
-<li><p>Occupation has &gt;75% “unknown” and is thus not used.</p></li>
+<li><p>In all SES variables including <strong>race</strong>, <strong>education</strong>, <strong>federal poverty level</strong>, <strong>home ownership, occupation, income, networth</strong>, and <strong>division</strong>, all NA values are coded as the same as the unknown level (“0” or “U”).<br />
+In the source data, race has values U, A, H, W, B, and “” (blank), where U means “Unknown”. Networth range has values 0, 1, 2, 3, 4, 5, and “” (blank), where 0 means “Unknown”. In the model, all blank values are filled in with the unknown level coding “U” or “0”. In the end, race only has values U, A, H, W, and B; networth range only has values 0,1,2,3,4,5. Variables having a level “Unknown” and having blank values are modified in this way. Such variables include race, education, federal poverty level, home ownership, occupation, income, networth range, and division.<br />
+A patient may either have no NAs in any of these 8 SES variables, or have NAs in all of these SES variables. 375 patients (2.51%) have NAs in the SES variables.</p></li>
+<li><p><strong>Federal poverty level</strong> only has 3 levels “Above 400% FPL”, “Below 400% FPL”, and “Unkown”, and very few people (&lt;=3) have “Below 400% FPL”. Thus <strong>fed_poverty</strong> is not used.</p></li>
+<li><p><strong>Home ownership</strong> only has “probable homeowner” and “unknown”. This does not provide useful information so is not used.</p></li>
+<li><p><strong>Occupation</strong> has &gt;75% “unknown” and is thus not used.</p></li>
 </ul>
 <p>Categories of some variables are combined, due to small cell counts which causes difficulty in fitting the model and yielding good parameter estimates.</p>
 <p>Here is description of variables used in the model:</p>
 <ul>
-<li><p>index_vte_type: categorical variable. It has levels “VTE_Lower.extremity.DVT”, “VTE_Other”, “VTE_Pulmonary.embolism”, “VTE_Upper.extremity.DVT”, and “VTE_ivc_rv_pv”.</p></li>
-<li><p>charlson_comorb_score: Charlson comorbidity score.</p></li>
-<li><p>Age_s: continuous variable, defined as (age - mean of age) / standard deviation of age.</p></li>
-<li><p>Race: categorical variable. It has levels “A”, “B”, “H”, “W”, and “U”, where “W” (white) is the reference level.</p></li>
-<li><p>Male: = 1 if a patient is male, and 0 if female.</p></li>
-<li><p>Education2: categorical variable. Since level “Less than 12th Grade” (“A”) has too few counts, it is combined with level “High School Diploma” (“B”) into in to a single level, coded as “AB”. The variable has levels “AB”, “C”, “D”, and “U”, where “&lt;Bachelor degree” (“C”) is the reference level.</p></li>
-<li><p>Hospitalized: = 1 if a patient was hospitalized within 28 days prior to index VTE date, and 0 if not.</p></li>
-<li><p>History of VTE: = 1 if a patient has history of VTE, and 0 if not.</p></li>
-<li><p>Division: categorical variable. “EAST NORTH CENTRAL” is the reference level.</p></li>
-<li><p>Income_range: categorical variable. “6” is the reference level.</p></li>
-<li><p>Product: categorical variable. “HMO” is the referene level.</p></li>
-<li><p>Malignancies: 8 binary variables. Each column has values 0 and 1. Each malignancy name is coded as “malignancy.cancer”. For example, “malignancy_Brain.CNS” means stomach cancers. “malignancy_Brain.CNS” = 1 if the patient has brain CNS on index cancer date. Malignancies follow the categorization in sheet “Table 1 Cleaned for Abstract” in “Optum Table 1 and 2 w regression 7-26-18.xlsx”.</p></li>
+<li><p><strong>VTE_VTEName</strong>: binary indicators of whether a patient has a particular VTE type (VTEName) in index_vte_type. It is derived from variable index_vte_type. Due to small counts of “IVC”, “RV” and “PV”, these three categories are combined into “ivc_rv_pv”. Hence there are five such binary columns: “VTE_Lower.extremity.DVT”, “VTE_Other”, “VTE_Pulmonary.embolism”, “VTE_Upper.extremity.DVT”, and “VTE_ivc_rv_pv”. For example, “VTE_Lower.extremity.DVT” = 1 if a patient has LE as one of index VTE types. This coding allows for multiple index VTE types.</p></li>
+<li><p><strong>vte_history</strong>: = 1 if a patient has history of VTE (ICD-9 code V12.51) within 12 months prior to index VTE date, and 0 if not.</p></li>
+<li><p><strong>Hospitalized</strong>: = 1 if a patient was hospitalized within 28 days prior to index VTE date, and 0 if not.</p></li>
+<li><p><strong>malignancy_cancerName</strong>: binary indicators of whether a patient has a particular cancer (cancerName) in malignancy. It is derived from cancer_type. There are 8 malignancy types: Brain.CNS, Breast, Gastrointestinal, Genitourinary, Gynecologic, Hematologic, Lung, and Other. Example: malignancy_Brain.CNS = 1 if brain/CNS is one of the patient’s index cancer types, and 0 if not. Malignancies follow the categorization in sheet “Table 1 Cleaned for Abstract” in “Optum Table 1 and 2 w regression 7-26-18.xlsx”. This coding allows for multiple malignancies.</p></li>
+<li><p><strong>charlson_comorb_score</strong>: Charlson comorbidity score.</p></li>
+<li><p><strong>Division</strong>: categorical variable with 10 levels. “EAST NORTH CENTRAL” is the reference level.</p></li>
+<li><p><strong>Education2</strong>: categorical variable. Due to small count in the category “Less than 12th Grade” (“A”), it is merged with level “High School Diploma” (“B”) into in to a new level coded as “AB”. <strong>Education2</strong> has four levels “AB”, “C”, “D”, and “U”, where “&lt;Bachelor degree” (“C”) is the reference level.</p></li>
+<li><p><strong>Income_range</strong>: categorical variable with 7 levels “0”, …, “6”. “6” is the reference level.</p></li>
+<li><p><strong>ac3mo_copay_rng</strong>: categorical variable with 7 levels [0, 10), [10, 30), [30, 50), [50, 100), [100, 250), [250, 500), and &gt;= 500. The “Undefined” level is dropped because it only exists for Multiple/Unknown. “[0, 10)” is the reference level.</p></li>
+<li><p><strong>Product</strong>: categorical variable with 6 levels. “HMO” is the referene level.</p></li>
 </ul>
+<!-- **Age\_s**: continuous variable. Scaled age, defined as (age - mean of age) / standard deviation of age. 
+
+**Race**: categorical variable. It has levels "A", "B", "H", "W", and "U", where "W" (white) is the reference level.
+
+- **Male**: = 1 if a patient is male, and 0 if female. -->
 </div>
 </div>
-<div id="multinomial-logistic-regression-on-ac-at-3-months" class="section level1">
-<h1>Multinomial logistic regression on AC at 3 months</h1>
-<div id="model-1" class="section level2">
-<h2>Model 1:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<div id="multinomial-logistic-regression-on-ac-at-3-months" class="section level2">
+<h2>Multinomial logistic regression on AC at 3 months</h2>
+<div id="model-1" class="section level3">
+<h3>Model 1:</h3>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <p>i.e. LMWH is the reference level for AC3Mo.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 1. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -283,6 +288,40 @@ VTE_ivc_rv_pv
 <td style="text-align:left;">
 -0.446±0.164 (0.007)<br />
 0.64
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.23±0.14 (0.101)<br />
+0.795
+</td>
+<td style="text-align:left;">
+-0.254±0.74 (0.732)<br />
+0.776
+</td>
+<td style="text-align:left;">
+0.11±0.103 (0.285)<br />
+1.116
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.252±0.101 (0.013)<br />
+0.777
+</td>
+<td style="text-align:left;">
+-0.292±0.546 (0.593)<br />
+0.747
+</td>
+<td style="text-align:left;">
+-0.087±0.075 (0.245)<br />
+0.917
 </td>
 </tr>
 <tr>
@@ -438,51 +477,17 @@ charlson_comorb_score
 1.12
 </td>
 </tr>
-<tr>
-<td style="text-align:left;">
-vte_history
-</td>
-<td style="text-align:left;">
--0.23±0.14 (0.101)<br />
-0.795
-</td>
-<td style="text-align:left;">
--0.254±0.74 (0.732)<br />
-0.776
-</td>
-<td style="text-align:left;">
-0.11±0.103 (0.285)<br />
-1.116
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-hospitalizedTRUE
-</td>
-<td style="text-align:left;">
--0.252±0.101 (0.013)<br />
-0.777
-</td>
-<td style="text-align:left;">
--0.292±0.546 (0.593)<br />
-0.747
-</td>
-<td style="text-align:left;">
--0.087±0.075 (0.245)<br />
-0.917
-</td>
-</tr>
 </tbody>
 </table>
 </div>
-<div id="model-2" class="section level2">
-<h2>Model 2:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<div id="model-2" class="section level3">
+<h3>Model 2:</h3>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 2. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -600,6 +605,40 @@ VTE_ivc_rv_pv
 <td style="text-align:left;">
 -0.407±0.165 (0.013)<br />
 0.666
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.229±0.141 (0.104)<br />
+0.795
+</td>
+<td style="text-align:left;">
+-0.258±0.742 (0.728)<br />
+0.773
+</td>
+<td style="text-align:left;">
+0.124±0.103 (0.23)<br />
+1.132
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.25±0.101 (0.014)<br />
+0.779
+</td>
+<td style="text-align:left;">
+-0.264±0.547 (0.629)<br />
+0.768
+</td>
+<td style="text-align:left;">
+-0.079±0.076 (0.298)<br />
+0.924
 </td>
 </tr>
 <tr>
@@ -753,40 +792,6 @@ charlson_comorb_score
 <td style="text-align:left;">
 0.118±0.016 (&lt;0.0001)<br />
 1.125
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-vte_history
-</td>
-<td style="text-align:left;">
--0.229±0.141 (0.104)<br />
-0.795
-</td>
-<td style="text-align:left;">
--0.258±0.742 (0.728)<br />
-0.773
-</td>
-<td style="text-align:left;">
-0.124±0.103 (0.23)<br />
-1.132
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-hospitalizedTRUE
-</td>
-<td style="text-align:left;">
--0.25±0.101 (0.014)<br />
-0.779
-</td>
-<td style="text-align:left;">
--0.264±0.547 (0.629)<br />
-0.768
-</td>
-<td style="text-align:left;">
--0.079±0.076 (0.298)<br />
-0.924
 </td>
 </tr>
 <tr>
@@ -945,14 +950,15 @@ divisionWEST SOUTH CENTRAL
 </tbody>
 </table>
 </div>
+</div>
 <div id="model-3" class="section level2">
 <h2>Model 3:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + ac3mo_copay_range, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 3. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -975,16 +981,16 @@ Warfarin
 (Intercept)
 </td>
 <td style="text-align:left;">
-0.318±0.193 (0.1)<br />
-1.374
+0.137±0.209 (0.51)<br />
+1.147
 </td>
 <td style="text-align:left;">
--4.862±1.113 (&lt;0.0001)<br />
-0.008
+-5.104±1.132 (&lt;0.0001)<br />
+0.006
 </td>
 <td style="text-align:left;">
-1.241±0.146 (&lt;0.0001)<br />
-3.459
+1.894±0.169 (&lt;0.0001)<br />
+6.646
 </td>
 </tr>
 <tr>
@@ -992,16 +998,16 @@ Warfarin
 VTE_Lower.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.025±0.101 (0.805)<br />
-0.975
+-0.018±0.104 (0.859)<br />
+0.982
 </td>
 <td style="text-align:left;">
--0.273±0.518 (0.599)<br />
-0.761
+-0.257±0.513 (0.616)<br />
+0.773
 </td>
 <td style="text-align:left;">
-0.231±0.076 (0.002)<br />
-1.26
+0.225±0.085 (0.008)<br />
+1.252
 </td>
 </tr>
 <tr>
@@ -1009,16 +1015,16 @@ VTE_Lower.extremity.DVT
 VTE_Other
 </td>
 <td style="text-align:left;">
--0.381±0.122 (0.002)<br />
-0.683
+-0.366±0.124 (0.003)<br />
+0.694
 </td>
 <td style="text-align:left;">
-0.332±0.559 (0.552)<br />
-1.394
+0.347±0.535 (0.517)<br />
+1.415
 </td>
 <td style="text-align:left;">
-0.174±0.089 (0.051)<br />
-1.19
+0.105±0.099 (0.292)<br />
+1.111
 </td>
 </tr>
 <tr>
@@ -1026,16 +1032,16 @@ VTE_Other
 VTE_Pulmonary.embolism
 </td>
 <td style="text-align:left;">
--0.215±0.107 (0.044)<br />
-0.807
+-0.211±0.11 (0.056)<br />
+0.81
 </td>
 <td style="text-align:left;">
--0.487±0.57 (0.392)<br />
-0.614
+-0.451±0.564 (0.424)<br />
+0.637
 </td>
 <td style="text-align:left;">
--0.137±0.081 (0.092)<br />
-0.872
+-0.134±0.091 (0.142)<br />
+0.875
 </td>
 </tr>
 <tr>
@@ -1043,16 +1049,16 @@ VTE_Pulmonary.embolism
 VTE_Upper.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.257±0.134 (0.054)<br />
-0.773
+-0.196±0.137 (0.151)<br />
+0.822
 </td>
 <td style="text-align:left;">
--1.217±0.837 (0.146)<br />
-0.296
+-1.035±0.802 (0.197)<br />
+0.355
 </td>
 <td style="text-align:left;">
--0.05±0.1 (0.617)<br />
-0.951
+-0.186±0.112 (0.095)<br />
+0.83
 </td>
 </tr>
 <tr>
@@ -1060,169 +1066,16 @@ VTE_Upper.extremity.DVT
 VTE_ivc_rv_pv
 </td>
 <td style="text-align:left;">
--0.791±0.256 (0.002)<br />
-0.453
+-0.773±0.261 (0.003)<br />
+0.462
 </td>
 <td style="text-align:left;">
--4.106±6.909 (0.552)<br />
-0.016
+-3.032±3.946 (0.442)<br />
+0.048
 </td>
 <td style="text-align:left;">
--0.364±0.167 (0.03)<br />
-0.695
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Brain.CNS
-</td>
-<td style="text-align:left;">
--1.028±0.256 (&lt;0.0001)<br />
-0.358
-</td>
-<td style="text-align:left;">
-0.283±1.11 (0.798)<br />
-1.327
-</td>
-<td style="text-align:left;">
--0.841±0.172 (&lt;0.0001)<br />
-0.431
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Breast
-</td>
-<td style="text-align:left;">
-0.321±0.142 (0.024)<br />
-1.379
-</td>
-<td style="text-align:left;">
--0.286±0.877 (0.744)<br />
-0.751
-</td>
-<td style="text-align:left;">
-0.417±0.11 (&lt;0.001)<br />
-1.517
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gastrointestinal
-</td>
-<td style="text-align:left;">
--0.404±0.119 (&lt;0.001)<br />
-0.668
-</td>
-<td style="text-align:left;">
-0.729±0.457 (0.11)<br />
-2.073
-</td>
-<td style="text-align:left;">
--0.303±0.086 (&lt;0.001)<br />
-0.739
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Genitourinary
-</td>
-<td style="text-align:left;">
-0.383±0.154 (0.013)<br />
-1.467
-</td>
-<td style="text-align:left;">
-1.139±0.661 (0.085)<br />
-3.124
-</td>
-<td style="text-align:left;">
-0.64±0.122 (&lt;0.0001)<br />
-1.896
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gynecololgic
-</td>
-<td style="text-align:left;">
--0.552±0.226 (0.014)<br />
-0.576
-</td>
-<td style="text-align:left;">
--3.216±5.872 (0.584)<br />
-0.04
-</td>
-<td style="text-align:left;">
--0.412±0.158 (0.009)<br />
-0.662
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Hematologic
-</td>
-<td style="text-align:left;">
--0.046±0.141 (0.742)<br />
-0.955
-</td>
-<td style="text-align:left;">
-0.998±0.516 (0.053)<br />
-2.713
-</td>
-<td style="text-align:left;">
--0.011±0.107 (0.917)<br />
-0.989
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Lung
-</td>
-<td style="text-align:left;">
--0.457±0.149 (0.002)<br />
-0.633
-</td>
-<td style="text-align:left;">
-0.875±0.634 (0.168)<br />
-2.399
-</td>
-<td style="text-align:left;">
--0.19±0.108 (0.079)<br />
-0.827
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Other
-</td>
-<td style="text-align:left;">
--0.293±0.086 (&lt;0.001)<br />
-0.746
-</td>
-<td style="text-align:left;">
--0.113±0.4 (0.779)<br />
-0.893
-</td>
-<td style="text-align:left;">
--0.276±0.061 (&lt;0.0001)<br />
-0.759
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-charlson_comorb_score
-</td>
-<td style="text-align:left;">
-0.043±0.021 (0.035)<br />
-1.044
-</td>
-<td style="text-align:left;">
--0.111±0.117 (0.346)<br />
-0.895
-</td>
-<td style="text-align:left;">
-0.092±0.016 (&lt;0.0001)<br />
-1.096
+-0.465±0.19 (0.015)<br />
+0.628
 </td>
 </tr>
 <tr>
@@ -1230,16 +1083,16 @@ charlson_comorb_score
 vte_history
 </td>
 <td style="text-align:left;">
--0.203±0.141 (0.151)<br />
-0.816
+-0.245±0.145 (0.091)<br />
+0.783
 </td>
 <td style="text-align:left;">
--0.26±0.743 (0.727)<br />
-0.771
+-0.294±0.729 (0.686)<br />
+0.745
 </td>
 <td style="text-align:left;">
-0.153±0.104 (0.143)<br />
-1.165
+0.215±0.118 (0.068)<br />
+1.24
 </td>
 </tr>
 <tr>
@@ -1247,16 +1100,169 @@ vte_history
 hospitalizedTRUE
 </td>
 <td style="text-align:left;">
--0.251±0.102 (0.014)<br />
-0.778
+-0.215±0.105 (0.04)<br />
+0.807
 </td>
 <td style="text-align:left;">
--0.276±0.55 (0.615)<br />
-0.759
+-0.337±0.54 (0.532)<br />
+0.714
 </td>
 <td style="text-align:left;">
--0.075±0.076 (0.324)<br />
-0.928
+-0.057±0.086 (0.506)<br />
+0.945
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Brain.CNS
+</td>
+<td style="text-align:left;">
+-1.035±0.263 (&lt;0.0001)<br />
+0.355
+</td>
+<td style="text-align:left;">
+0.304±1.091 (0.78)<br />
+1.355
+</td>
+<td style="text-align:left;">
+-0.823±0.197 (&lt;0.0001)<br />
+0.439
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Breast
+</td>
+<td style="text-align:left;">
+0.293±0.146 (0.045)<br />
+1.34
+</td>
+<td style="text-align:left;">
+-0.219±0.818 (0.789)<br />
+0.803
+</td>
+<td style="text-align:left;">
+0.476±0.123 (&lt;0.001)<br />
+1.61
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gastrointestinal
+</td>
+<td style="text-align:left;">
+-0.407±0.123 (&lt;0.001)<br />
+0.666
+</td>
+<td style="text-align:left;">
+0.613±0.456 (0.179)<br />
+1.846
+</td>
+<td style="text-align:left;">
+-0.249±0.098 (0.011)<br />
+0.78
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Genitourinary
+</td>
+<td style="text-align:left;">
+0.359±0.159 (0.024)<br />
+1.432
+</td>
+<td style="text-align:left;">
+1.078±0.652 (0.098)<br />
+2.939
+</td>
+<td style="text-align:left;">
+0.704±0.136 (&lt;0.0001)<br />
+2.022
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gynecololgic
+</td>
+<td style="text-align:left;">
+-0.564±0.231 (0.015)<br />
+0.569
+</td>
+<td style="text-align:left;">
+-2.291±3.554 (0.519)<br />
+0.101
+</td>
+<td style="text-align:left;">
+-0.419±0.181 (0.021)<br />
+0.658
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Hematologic
+</td>
+<td style="text-align:left;">
+-0.035±0.141 (0.804)<br />
+0.966
+</td>
+<td style="text-align:left;">
+0.959±0.494 (0.052)<br />
+2.609
+</td>
+<td style="text-align:left;">
+-0.04±0.119 (0.738)<br />
+0.961
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Lung
+</td>
+<td style="text-align:left;">
+-0.476±0.154 (0.002)<br />
+0.621
+</td>
+<td style="text-align:left;">
+0.821±0.625 (0.189)<br />
+2.273
+</td>
+<td style="text-align:left;">
+-0.15±0.123 (0.222)<br />
+0.861
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Other
+</td>
+<td style="text-align:left;">
+-0.298±0.089 (&lt;0.001)<br />
+0.742
+</td>
+<td style="text-align:left;">
+-0.144±0.395 (0.715)<br />
+0.866
+</td>
+<td style="text-align:left;">
+-0.261±0.07 (&lt;0.001)<br />
+0.77
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+charlson_comorb_score
+</td>
+<td style="text-align:left;">
+0.037±0.021 (0.083)<br />
+1.038
+</td>
+<td style="text-align:left;">
+-0.088±0.114 (0.443)<br />
+0.916
+</td>
+<td style="text-align:left;">
+0.087±0.018 (&lt;0.0001)<br />
+1.091
 </td>
 </tr>
 <tr>
@@ -1264,16 +1270,16 @@ hospitalizedTRUE
 divisionEAST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.944±0.226 (&lt;0.0001)<br />
-2.57
+0.901±0.228 (&lt;0.0001)<br />
+2.462
 </td>
 <td style="text-align:left;">
-1.994±1.044 (0.056)<br />
-7.345
+1.792±0.992 (0.071)<br />
+6.001
 </td>
 <td style="text-align:left;">
-0.743±0.194 (&lt;0.001)<br />
-2.102
+0.62±0.207 (0.003)<br />
+1.859
 </td>
 </tr>
 <tr>
@@ -1281,16 +1287,16 @@ divisionEAST SOUTH CENTRAL
 divisionMIDDLE ATLANTIC
 </td>
 <td style="text-align:left;">
--0.113±0.161 (0.481)<br />
-0.893
+-0.056±0.166 (0.734)<br />
+0.946
 </td>
 <td style="text-align:left;">
--3.636±5.963 (0.542)<br />
-0.026
+-2.07±2.844 (0.467)<br />
+0.126
 </td>
 <td style="text-align:left;">
--0.651±0.126 (&lt;0.0001)<br />
-0.522
+-0.772±0.14 (&lt;0.0001)<br />
+0.462
 </td>
 </tr>
 <tr>
@@ -1298,16 +1304,16 @@ divisionMIDDLE ATLANTIC
 divisionMOUNTAIN
 </td>
 <td style="text-align:left;">
-0.204±0.158 (0.196)<br />
-1.226
+0.233±0.163 (0.152)<br />
+1.262
 </td>
 <td style="text-align:left;">
-1.718±0.877 (0.05)<br />
-5.573
+1.636±0.819 (0.046)<br />
+5.135
 </td>
 <td style="text-align:left;">
-0.569±0.123 (&lt;0.0001)<br />
-1.766
+0.705±0.139 (&lt;0.0001)<br />
+2.024
 </td>
 </tr>
 <tr>
@@ -1315,16 +1321,16 @@ divisionMOUNTAIN
 divisionNEW ENGLAND
 </td>
 <td style="text-align:left;">
--1.126±0.231 (&lt;0.0001)<br />
-0.324
+-0.988±0.236 (&lt;0.0001)<br />
+0.372
 </td>
 <td style="text-align:left;">
-0.361±1.244 (0.772)<br />
-1.435
+0.312±1.187 (0.793)<br />
+1.366
 </td>
 <td style="text-align:left;">
--0.48±0.141 (&lt;0.001)<br />
-0.619
+-0.515±0.164 (0.002)<br />
+0.598
 </td>
 </tr>
 <tr>
@@ -1332,16 +1338,16 @@ divisionNEW ENGLAND
 divisionPACIFIC
 </td>
 <td style="text-align:left;">
-0.029±0.158 (0.854)<br />
-1.029
+0.073±0.161 (0.65)<br />
+1.076
 </td>
 <td style="text-align:left;">
--0.191±1.249 (0.879)<br />
-0.826
+0±1.133 (1)<br />
+1
 </td>
 <td style="text-align:left;">
-0.273±0.121 (0.025)<br />
-1.314
+0.29±0.136 (0.033)<br />
+1.336
 </td>
 </tr>
 <tr>
@@ -1349,15 +1355,15 @@ divisionPACIFIC
 divisionSOUTH ATLANTIC
 </td>
 <td style="text-align:left;">
-0.265±0.114 (0.02)<br />
-1.303
+0.222±0.116 (0.056)<br />
+1.249
 </td>
 <td style="text-align:left;">
-1.512±0.793 (0.057)<br />
-4.536
+1.388±0.725 (0.056)<br />
+4.007
 </td>
 <td style="text-align:left;">
-0.046±0.089 (0.607)<br />
+0.046±0.099 (0.642)<br />
 1.047
 </td>
 </tr>
@@ -1366,16 +1372,16 @@ divisionSOUTH ATLANTIC
 divisionUNKNOWN
 </td>
 <td style="text-align:left;">
--0.507±0.92 (0.581)<br />
-0.602
+-0.647±0.94 (0.491)<br />
+0.524
 </td>
 <td style="text-align:left;">
--0.713±6.975 (0.919)<br />
-0.49
+-0.54±7.236 (0.941)<br />
+0.583
 </td>
 <td style="text-align:left;">
-0.877±0.606 (0.148)<br />
-2.404
+1.007±0.669 (0.133)<br />
+2.737
 </td>
 </tr>
 <tr>
@@ -1383,16 +1389,16 @@ divisionUNKNOWN
 divisionWEST NORTH CENTRAL
 </td>
 <td style="text-align:left;">
--0.106±0.149 (0.476)<br />
-0.899
+-0.015±0.153 (0.922)<br />
+0.985
 </td>
 <td style="text-align:left;">
-0.851±0.945 (0.368)<br />
-2.342
+0.883±0.884 (0.318)<br />
+2.418
 </td>
 <td style="text-align:left;">
-0.009±0.112 (0.937)<br />
-1.009
+-0.12±0.125 (0.335)<br />
+0.887
 </td>
 </tr>
 <tr>
@@ -1400,16 +1406,16 @@ divisionWEST NORTH CENTRAL
 divisionWEST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.125±0.14 (0.372)<br />
-1.133
+0.047±0.143 (0.743)<br />
+1.048
 </td>
 <td style="text-align:left;">
-0.375±1.029 (0.715)<br />
-1.455
+0.317±0.953 (0.739)<br />
+1.373
 </td>
 <td style="text-align:left;">
-0.099±0.108 (0.361)<br />
-1.104
+0.174±0.121 (0.15)<br />
+1.19
 </td>
 </tr>
 <tr>
@@ -1417,16 +1423,16 @@ divisionWEST SOUTH CENTRAL
 education2AB
 </td>
 <td style="text-align:left;">
--0.096±0.094 (0.308)<br />
-0.908
+-0.145±0.096 (0.131)<br />
+0.865
 </td>
 <td style="text-align:left;">
--0.343±0.473 (0.469)<br />
-0.71
+-0.249±0.461 (0.589)<br />
+0.78
 </td>
 <td style="text-align:left;">
-0.055±0.073 (0.449)<br />
-1.057
+-0.031±0.081 (0.697)<br />
+0.969
 </td>
 </tr>
 <tr>
@@ -1434,16 +1440,16 @@ education2AB
 education2D
 </td>
 <td style="text-align:left;">
--0.239±0.108 (0.027)<br />
-0.787
+-0.261±0.111 (0.019)<br />
+0.77
 </td>
 <td style="text-align:left;">
--0.437±0.594 (0.462)<br />
-0.646
+-0.479±0.569 (0.4)<br />
+0.619
 </td>
 <td style="text-align:left;">
--0.227±0.083 (0.006)<br />
-0.797
+-0.15±0.094 (0.109)<br />
+0.861
 </td>
 </tr>
 <tr>
@@ -1451,16 +1457,16 @@ education2D
 education2U
 </td>
 <td style="text-align:left;">
-0.195±0.321 (0.544)<br />
-1.215
+0.362±0.28 (0.196)<br />
+1.436
 </td>
 <td style="text-align:left;">
-1.062±1.793 (0.554)<br />
-2.892
+-0.212±1.103 (0.847)<br />
+0.809
 </td>
 <td style="text-align:left;">
-0.332±0.258 (0.198)<br />
-1.394
+0.5±0.248 (0.044)<br />
+1.649
 </td>
 </tr>
 <tr>
@@ -1468,16 +1474,16 @@ education2U
 income_range0
 </td>
 <td style="text-align:left;">
--0.004±0.149 (0.981)<br />
-0.996
+-0.053±0.152 (0.728)<br />
+0.948
 </td>
 <td style="text-align:left;">
-0.981±0.606 (0.106)<br />
-2.667
+0.884±0.581 (0.128)<br />
+2.421
 </td>
 <td style="text-align:left;">
-0.462±0.112 (&lt;0.0001)<br />
-1.587
+0.483±0.126 (&lt;0.001)<br />
+1.621
 </td>
 </tr>
 <tr>
@@ -1485,16 +1491,16 @@ income_range0
 income_range1
 </td>
 <td style="text-align:left;">
-0.359±0.121 (0.003)<br />
-1.432
+0.345±0.125 (0.006)<br />
+1.412
 </td>
 <td style="text-align:left;">
-0.592±0.601 (0.324)<br />
-1.808
+0.571±0.581 (0.326)<br />
+1.77
 </td>
 <td style="text-align:left;">
-0.893±0.095 (&lt;0.0001)<br />
-2.442
+0.83±0.106 (&lt;0.0001)<br />
+2.293
 </td>
 </tr>
 <tr>
@@ -1502,16 +1508,16 @@ income_range1
 income_range2
 </td>
 <td style="text-align:left;">
-0.353±0.155 (0.023)<br />
-1.423
+0.237±0.159 (0.136)<br />
+1.267
 </td>
 <td style="text-align:left;">
--0.555±1.091 (0.611)<br />
-0.574
+-0.576±1.015 (0.571)<br />
+0.562
 </td>
 <td style="text-align:left;">
-0.665±0.123 (&lt;0.0001)<br />
-1.944
+0.723±0.137 (&lt;0.0001)<br />
+2.061
 </td>
 </tr>
 <tr>
@@ -1519,16 +1525,16 @@ income_range2
 income_range3
 </td>
 <td style="text-align:left;">
-0.177±0.158 (0.261)<br />
-1.194
+0.165±0.163 (0.31)<br />
+1.179
 </td>
 <td style="text-align:left;">
-0.682±0.726 (0.347)<br />
-1.978
+0.454±0.71 (0.522)<br />
+1.575
 </td>
 <td style="text-align:left;">
-0.546±0.123 (&lt;0.0001)<br />
-1.726
+0.623±0.139 (&lt;0.0001)<br />
+1.865
 </td>
 </tr>
 <tr>
@@ -1536,16 +1542,16 @@ income_range3
 income_range4
 </td>
 <td style="text-align:left;">
-0.012±0.137 (0.932)<br />
-1.012
+-0.069±0.141 (0.626)<br />
+0.933
 </td>
 <td style="text-align:left;">
-0.104±0.705 (0.882)<br />
-1.11
+-0.018±0.696 (0.979)<br />
+0.982
 </td>
 <td style="text-align:left;">
-0.304±0.104 (0.004)<br />
-1.355
+0.394±0.118 (&lt;0.001)<br />
+1.483
 </td>
 </tr>
 <tr>
@@ -1553,84 +1559,118 @@ income_range4
 income_range5
 </td>
 <td style="text-align:left;">
-0.185±0.125 (0.138)<br />
-1.203
+0.165±0.128 (0.197)<br />
+1.179
 </td>
 <td style="text-align:left;">
--0.436±0.806 (0.589)<br />
-0.647
+-0.434±0.774 (0.575)<br />
+0.648
 </td>
 <td style="text-align:left;">
-0.403±0.098 (&lt;0.0001)<br />
-1.496
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceA
-</td>
-<td style="text-align:left;">
--0.214±0.259 (0.409)<br />
-0.807
-</td>
-<td style="text-align:left;">
-1.411±0.783 (0.072)<br />
-4.1
-</td>
-<td style="text-align:left;">
--0.567±0.2 (0.005)<br />
-0.567
+0.5±0.11 (&lt;0.0001)<br />
+1.649
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceB
+ac3mo_copay_rng[10,30)
 </td>
 <td style="text-align:left;">
--0.49±0.121 (&lt;0.0001)<br />
-0.613
+-0.428±0.119 (&lt;0.001)<br />
+0.652
 </td>
 <td style="text-align:left;">
--0.224±0.58 (0.7)<br />
-0.799
+-0.101±0.658 (0.878)<br />
+0.904
 </td>
 <td style="text-align:left;">
--0.307±0.091 (&lt;0.001)<br />
-0.736
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceH
-</td>
-<td style="text-align:left;">
--0.204±0.165 (0.215)<br />
-0.815
-</td>
-<td style="text-align:left;">
-0.246±0.767 (0.749)<br />
-1.279
-</td>
-<td style="text-align:left;">
--0.186±0.125 (0.137)<br />
-0.83
+-0.232±0.08 (0.004)<br />
+0.793
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceU
+ac3mo_copay_rng[100,250)
 </td>
 <td style="text-align:left;">
-0.154±0.197 (0.435)<br />
-1.166
+0.714±0.168 (&lt;0.0001)<br />
+2.042
 </td>
 <td style="text-align:left;">
--1.666±1.781 (0.35)<br />
-0.189
+0.144±1.057 (0.892)<br />
+1.155
 </td>
 <td style="text-align:left;">
--0.114±0.16 (0.477)<br />
-0.892
+-2.953±0.192 (&lt;0.0001)<br />
+0.052
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[250,500)
+</td>
+<td style="text-align:left;">
+-0.241±0.287 (0.402)<br />
+0.786
+</td>
+<td style="text-align:left;">
+0.734±1.124 (0.514)<br />
+2.083
+</td>
+<td style="text-align:left;">
+-4.154±0.393 (&lt;0.0001)<br />
+0.016
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[30,50)
+</td>
+<td style="text-align:left;">
+0.647±0.099 (&lt;0.0001)<br />
+1.91
+</td>
+<td style="text-align:left;">
+1.041±0.486 (0.032)<br />
+2.832
+</td>
+<td style="text-align:left;">
+-3.097±0.102 (&lt;0.0001)<br />
+0.045
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[50,100)
+</td>
+<td style="text-align:left;">
+0.091±0.128 (0.478)<br />
+1.095
+</td>
+<td style="text-align:left;">
+0.349±0.656 (0.595)<br />
+1.418
+</td>
+<td style="text-align:left;">
+-3.775±0.158 (&lt;0.0001)<br />
+0.023
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng= 500
+</td>
+<td style="text-align:left;">
+-3.919±1.003 (&lt;0.0001)<br />
+0.02
+</td>
+<td style="text-align:left;">
+0.091±1.11 (0.935)<br />
+1.095
+</td>
+<td style="text-align:left;">
+-6.043±0.745 (&lt;0.0001)<br />
+0.002
 </td>
 </tr>
 </tbody>
@@ -1638,12 +1678,12 @@ raceU
 </div>
 <div id="model-4" class="section level2">
 <h2>Model 4:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race + product, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + ac3mo_copay_range + product, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 4. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -1666,16 +1706,16 @@ Warfarin
 (Intercept)
 </td>
 <td style="text-align:left;">
-0.301±0.217 (0.165)<br />
-1.351
+0.05±0.23 (0.828)<br />
+1.051
 </td>
 <td style="text-align:left;">
--5.113±1.249 (&lt;0.0001)<br />
-0.006
+-4.825±1.161 (&lt;0.0001)<br />
+0.008
 </td>
 <td style="text-align:left;">
-1.917±0.163 (&lt;0.0001)<br />
-6.801
+2.483±0.187 (&lt;0.0001)<br />
+11.977
 </td>
 </tr>
 <tr>
@@ -1683,16 +1723,16 @@ Warfarin
 VTE_Lower.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.035±0.101 (0.73)<br />
-0.966
+-0.013±0.104 (0.898)<br />
+0.987
 </td>
 <td style="text-align:left;">
--0.235±0.518 (0.65)<br />
-0.791
+-0.233±0.505 (0.644)<br />
+0.792
 </td>
 <td style="text-align:left;">
-0.215±0.076 (0.005)<br />
-1.24
+0.208±0.086 (0.015)<br />
+1.231
 </td>
 </tr>
 <tr>
@@ -1700,16 +1740,16 @@ VTE_Lower.extremity.DVT
 VTE_Other
 </td>
 <td style="text-align:left;">
--0.316±0.122 (0.01)<br />
-0.729
+-0.289±0.125 (0.021)<br />
+0.749
 </td>
 <td style="text-align:left;">
-0.411±0.559 (0.463)<br />
+0.411±0.532 (0.44)<br />
 1.508
 </td>
 <td style="text-align:left;">
-0.227±0.09 (0.011)<br />
-1.255
+0.164±0.1 (0.102)<br />
+1.178
 </td>
 </tr>
 <tr>
@@ -1717,16 +1757,16 @@ VTE_Other
 VTE_Pulmonary.embolism
 </td>
 <td style="text-align:left;">
--0.203±0.108 (0.059)<br />
-0.816
+-0.182±0.111 (0.102)<br />
+0.834
 </td>
 <td style="text-align:left;">
--0.437±0.569 (0.443)<br />
-0.646
+-0.419±0.555 (0.451)<br />
+0.658
 </td>
 <td style="text-align:left;">
--0.129±0.082 (0.114)<br />
-0.879
+-0.128±0.092 (0.165)<br />
+0.88
 </td>
 </tr>
 <tr>
@@ -1734,16 +1774,16 @@ VTE_Pulmonary.embolism
 VTE_Upper.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.184±0.134 (0.17)<br />
-0.832
+-0.089±0.138 (0.517)<br />
+0.915
 </td>
 <td style="text-align:left;">
--1.18±0.845 (0.163)<br />
-0.307
+-0.991±0.793 (0.211)<br />
+0.371
 </td>
 <td style="text-align:left;">
-0.027±0.101 (0.789)<br />
-1.027
+-0.086±0.113 (0.448)<br />
+0.918
 </td>
 </tr>
 <tr>
@@ -1751,169 +1791,16 @@ VTE_Upper.extremity.DVT
 VTE_ivc_rv_pv
 </td>
 <td style="text-align:left;">
--0.762±0.259 (0.003)<br />
-0.467
+-0.709±0.263 (0.007)<br />
+0.492
 </td>
 <td style="text-align:left;">
--4.001±6.943 (0.564)<br />
-0.018
+-2.611±3.253 (0.422)<br />
+0.073
 </td>
 <td style="text-align:left;">
--0.334±0.169 (0.048)<br />
-0.716
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Brain.CNS
-</td>
-<td style="text-align:left;">
--0.888±0.257 (&lt;0.001)<br />
-0.411
-</td>
-<td style="text-align:left;">
-0.286±1.117 (0.798)<br />
-1.331
-</td>
-<td style="text-align:left;">
--0.742±0.174 (&lt;0.0001)<br />
-0.476
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Breast
-</td>
-<td style="text-align:left;">
-0.363±0.143 (0.011)<br />
-1.438
-</td>
-<td style="text-align:left;">
--0.391±0.913 (0.669)<br />
-0.676
-</td>
-<td style="text-align:left;">
-0.424±0.111 (&lt;0.001)<br />
-1.528
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gastrointestinal
-</td>
-<td style="text-align:left;">
--0.357±0.119 (0.003)<br />
-0.7
-</td>
-<td style="text-align:left;">
-0.705±0.463 (0.128)<br />
-2.024
-</td>
-<td style="text-align:left;">
--0.273±0.086 (0.002)<br />
-0.761
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Genitourinary
-</td>
-<td style="text-align:left;">
-0.323±0.155 (0.037)<br />
-1.381
-</td>
-<td style="text-align:left;">
-1.126±0.663 (0.089)<br />
-3.083
-</td>
-<td style="text-align:left;">
-0.56±0.122 (&lt;0.0001)<br />
-1.751
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gynecololgic
-</td>
-<td style="text-align:left;">
--0.476±0.227 (0.036)<br />
-0.621
-</td>
-<td style="text-align:left;">
--3.406±6.595 (0.606)<br />
-0.033
-</td>
-<td style="text-align:left;">
--0.383±0.161 (0.017)<br />
-0.682
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Hematologic
-</td>
-<td style="text-align:left;">
--0.016±0.142 (0.909)<br />
-0.984
-</td>
-<td style="text-align:left;">
-0.996±0.52 (0.056)<br />
-2.707
-</td>
-<td style="text-align:left;">
-0.002±0.108 (0.983)<br />
-1.002
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Lung
-</td>
-<td style="text-align:left;">
--0.453±0.15 (0.003)<br />
-0.636
-</td>
-<td style="text-align:left;">
-0.895±0.633 (0.157)<br />
-2.447
-</td>
-<td style="text-align:left;">
--0.221±0.109 (0.042)<br />
-0.802
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Other
-</td>
-<td style="text-align:left;">
--0.253±0.087 (0.003)<br />
-0.776
-</td>
-<td style="text-align:left;">
--0.153±0.411 (0.709)<br />
-0.858
-</td>
-<td style="text-align:left;">
--0.236±0.062 (&lt;0.001)<br />
-0.79
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-charlson_comorb_score
-</td>
-<td style="text-align:left;">
-0.007±0.021 (0.738)<br />
-1.007
-</td>
-<td style="text-align:left;">
--0.119±0.119 (0.318)<br />
-0.888
-</td>
-<td style="text-align:left;">
-0.056±0.016 (&lt;0.001)<br />
-1.058
+-0.447±0.192 (0.02)<br />
+0.64
 </td>
 </tr>
 <tr>
@@ -1921,16 +1808,16 @@ charlson_comorb_score
 vte_history
 </td>
 <td style="text-align:left;">
--0.161±0.142 (0.256)<br />
-0.851
+-0.241±0.148 (0.103)<br />
+0.786
 </td>
 <td style="text-align:left;">
--0.271±0.76 (0.722)<br />
+-0.271±0.718 (0.706)<br />
 0.763
 </td>
 <td style="text-align:left;">
-0.165±0.105 (0.116)<br />
-1.179
+0.224±0.119 (0.06)<br />
+1.251
 </td>
 </tr>
 <tr>
@@ -1938,16 +1825,169 @@ vte_history
 hospitalizedTRUE
 </td>
 <td style="text-align:left;">
--0.224±0.102 (0.028)<br />
-0.799
+-0.168±0.106 (0.112)<br />
+0.845
 </td>
 <td style="text-align:left;">
--0.237±0.554 (0.668)<br />
-0.789
+-0.288±0.532 (0.588)<br />
+0.75
 </td>
 <td style="text-align:left;">
--0.049±0.077 (0.526)<br />
-0.952
+-0.022±0.087 (0.797)<br />
+0.978
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Brain.CNS
+</td>
+<td style="text-align:left;">
+-0.907±0.265 (&lt;0.001)<br />
+0.404
+</td>
+<td style="text-align:left;">
+0.293±1.083 (0.787)<br />
+1.34
+</td>
+<td style="text-align:left;">
+-0.698±0.2 (&lt;0.001)<br />
+0.498
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Breast
+</td>
+<td style="text-align:left;">
+0.342±0.148 (0.021)<br />
+1.408
+</td>
+<td style="text-align:left;">
+-0.209±0.807 (0.796)<br />
+0.811
+</td>
+<td style="text-align:left;">
+0.49±0.124 (&lt;0.0001)<br />
+1.632
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gastrointestinal
+</td>
+<td style="text-align:left;">
+-0.373±0.125 (0.003)<br />
+0.689
+</td>
+<td style="text-align:left;">
+0.585±0.459 (0.203)<br />
+1.795
+</td>
+<td style="text-align:left;">
+-0.213±0.099 (0.031)<br />
+0.808
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Genitourinary
+</td>
+<td style="text-align:left;">
+0.316±0.161 (0.049)<br />
+1.372
+</td>
+<td style="text-align:left;">
+1.024±0.65 (0.115)<br />
+2.784
+</td>
+<td style="text-align:left;">
+0.627±0.137 (&lt;0.0001)<br />
+1.872
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gynecololgic
+</td>
+<td style="text-align:left;">
+-0.514±0.235 (0.029)<br />
+0.598
+</td>
+<td style="text-align:left;">
+-1.885±2.896 (0.515)<br />
+0.152
+</td>
+<td style="text-align:left;">
+-0.381±0.184 (0.038)<br />
+0.683
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Hematologic
+</td>
+<td style="text-align:left;">
+0.003±0.143 (0.981)<br />
+1.003
+</td>
+<td style="text-align:left;">
+0.948±0.502 (0.059)<br />
+2.581
+</td>
+<td style="text-align:left;">
+-0.019±0.121 (0.873)<br />
+0.981
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Lung
+</td>
+<td style="text-align:left;">
+-0.46±0.156 (0.003)<br />
+0.631
+</td>
+<td style="text-align:left;">
+0.798±0.619 (0.197)<br />
+2.221
+</td>
+<td style="text-align:left;">
+-0.17±0.124 (0.172)<br />
+0.844
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Other
+</td>
+<td style="text-align:left;">
+-0.251±0.09 (0.005)<br />
+0.778
+</td>
+<td style="text-align:left;">
+-0.143±0.394 (0.717)<br />
+0.867
+</td>
+<td style="text-align:left;">
+-0.216±0.071 (0.002)<br />
+0.806
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+charlson_comorb_score
+</td>
+<td style="text-align:left;">
+0.005±0.022 (0.815)<br />
+1.005
+</td>
+<td style="text-align:left;">
+-0.093±0.112 (0.404)<br />
+0.911
+</td>
+<td style="text-align:left;">
+0.049±0.018 (0.008)<br />
+1.05
 </td>
 </tr>
 <tr>
@@ -1955,16 +1995,16 @@ hospitalizedTRUE
 divisionEAST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.906±0.227 (&lt;0.0001)<br />
-2.474
+0.911±0.23 (&lt;0.0001)<br />
+2.487
 </td>
 <td style="text-align:left;">
-2.124±1.109 (0.055)<br />
-8.365
+1.704±0.978 (0.081)<br />
+5.496
 </td>
 <td style="text-align:left;">
-0.718±0.195 (&lt;0.001)<br />
-2.05
+0.604±0.208 (0.004)<br />
+1.829
 </td>
 </tr>
 <tr>
@@ -1972,16 +2012,16 @@ divisionEAST SOUTH CENTRAL
 divisionMIDDLE ATLANTIC
 </td>
 <td style="text-align:left;">
--0.218±0.165 (0.186)<br />
-0.804
+-0.139±0.17 (0.416)<br />
+0.87
 </td>
 <td style="text-align:left;">
--4.398±9.797 (0.653)<br />
-0.012
+-1.666±2.355 (0.479)<br />
+0.189
 </td>
 <td style="text-align:left;">
--0.688±0.13 (&lt;0.0001)<br />
-0.503
+-0.848±0.144 (&lt;0.0001)<br />
+0.428
 </td>
 </tr>
 <tr>
@@ -1989,16 +2029,16 @@ divisionMIDDLE ATLANTIC
 divisionMOUNTAIN
 </td>
 <td style="text-align:left;">
-0.247±0.159 (0.12)<br />
-1.28
+0.339±0.165 (0.04)<br />
+1.404
 </td>
 <td style="text-align:left;">
-1.918±0.942 (0.042)<br />
-6.807
+1.532±0.807 (0.058)<br />
+4.627
 </td>
 <td style="text-align:left;">
-0.465±0.124 (&lt;0.001)<br />
-1.592
+0.645±0.141 (&lt;0.0001)<br />
+1.906
 </td>
 </tr>
 <tr>
@@ -2006,16 +2046,16 @@ divisionMOUNTAIN
 divisionNEW ENGLAND
 </td>
 <td style="text-align:left;">
--1.406±0.235 (&lt;0.0001)<br />
-0.245
+-1.247±0.242 (&lt;0.0001)<br />
+0.287
 </td>
 <td style="text-align:left;">
-0.48±1.31 (0.714)<br />
-1.616
+0.233±1.164 (0.841)<br />
+1.262
 </td>
 <td style="text-align:left;">
--0.655±0.145 (&lt;0.0001)<br />
-0.519
+-0.742±0.169 (&lt;0.0001)<br />
+0.476
 </td>
 </tr>
 <tr>
@@ -2023,16 +2063,16 @@ divisionNEW ENGLAND
 divisionPACIFIC
 </td>
 <td style="text-align:left;">
-0.125±0.161 (0.437)<br />
-1.133
+0.212±0.166 (0.201)<br />
+1.236
 </td>
 <td style="text-align:left;">
-0.041±1.301 (0.975)<br />
-1.042
+-0.115±1.132 (0.919)<br />
+0.891
 </td>
 <td style="text-align:left;">
-0.064±0.124 (0.608)<br />
-1.066
+0.116±0.139 (0.404)<br />
+1.123
 </td>
 </tr>
 <tr>
@@ -2040,16 +2080,16 @@ divisionPACIFIC
 divisionSOUTH ATLANTIC
 </td>
 <td style="text-align:left;">
-0.189±0.117 (0.107)<br />
-1.208
+0.186±0.121 (0.124)<br />
+1.204
 </td>
 <td style="text-align:left;">
-1.74±0.864 (0.044)<br />
-5.697
+1.368±0.705 (0.052)<br />
+3.927
 </td>
 <td style="text-align:left;">
--0.015±0.092 (0.87)<br />
-0.985
+-0.052±0.102 (0.615)<br />
+0.949
 </td>
 </tr>
 <tr>
@@ -2057,16 +2097,16 @@ divisionSOUTH ATLANTIC
 divisionUNKNOWN
 </td>
 <td style="text-align:left;">
--0.386±0.927 (0.677)<br />
-0.68
+-0.337±0.944 (0.721)<br />
+0.714
 </td>
 <td style="text-align:left;">
--0.756±7.406 (0.919)<br />
-0.47
+-0.398±6.642 (0.952)<br />
+0.672
 </td>
 <td style="text-align:left;">
-0.535±0.602 (0.374)<br />
-1.707
+0.754±0.696 (0.279)<br />
+2.125
 </td>
 </tr>
 <tr>
@@ -2074,16 +2114,16 @@ divisionUNKNOWN
 divisionWEST NORTH CENTRAL
 </td>
 <td style="text-align:left;">
--0.107±0.15 (0.476)<br />
-0.899
+-0.008±0.155 (0.958)<br />
+0.992
 </td>
 <td style="text-align:left;">
-1.048±1.003 (0.296)<br />
-2.852
+0.816±0.861 (0.344)<br />
+2.261
 </td>
 <td style="text-align:left;">
--0.043±0.113 (0.704)<br />
-0.958
+-0.162±0.126 (0.2)<br />
+0.85
 </td>
 </tr>
 <tr>
@@ -2091,16 +2131,16 @@ divisionWEST NORTH CENTRAL
 divisionWEST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.336±0.142 (0.018)<br />
-1.399
+0.268±0.145 (0.065)<br />
+1.307
 </td>
 <td style="text-align:left;">
-0.591±1.092 (0.588)<br />
-1.806
+0.349±0.929 (0.707)<br />
+1.418
 </td>
 <td style="text-align:left;">
-0.144±0.11 (0.191)<br />
-1.155
+0.253±0.123 (0.04)<br />
+1.288
 </td>
 </tr>
 <tr>
@@ -2108,16 +2148,16 @@ divisionWEST SOUTH CENTRAL
 education2AB
 </td>
 <td style="text-align:left;">
--0.078±0.095 (0.408)<br />
-0.925
+-0.135±0.097 (0.164)<br />
+0.874
 </td>
 <td style="text-align:left;">
--0.316±0.478 (0.509)<br />
-0.729
+-0.249±0.46 (0.588)<br />
+0.78
 </td>
 <td style="text-align:left;">
-0.096±0.074 (0.194)<br />
-1.101
+0.013±0.082 (0.876)<br />
+1.013
 </td>
 </tr>
 <tr>
@@ -2125,16 +2165,16 @@ education2AB
 education2D
 </td>
 <td style="text-align:left;">
--0.252±0.109 (0.02)<br />
-0.777
+-0.257±0.112 (0.022)<br />
+0.773
 </td>
 <td style="text-align:left;">
--0.439±0.605 (0.469)<br />
-0.645
+-0.494±0.566 (0.382)<br />
+0.61
 </td>
 <td style="text-align:left;">
--0.244±0.084 (0.004)<br />
-0.783
+-0.165±0.095 (0.084)<br />
+0.848
 </td>
 </tr>
 <tr>
@@ -2142,16 +2182,16 @@ education2D
 education2U
 </td>
 <td style="text-align:left;">
--0.222±0.324 (0.494)<br />
-0.801
+-0.042±0.286 (0.884)<br />
+0.959
 </td>
 <td style="text-align:left;">
-0.941±1.738 (0.588)<br />
-2.563
+-0.457±1.119 (0.683)<br />
+0.633
 </td>
 <td style="text-align:left;">
-0.022±0.257 (0.932)<br />
-1.022
+0.114±0.252 (0.649)<br />
+1.121
 </td>
 </tr>
 <tr>
@@ -2159,16 +2199,16 @@ education2U
 income_range0
 </td>
 <td style="text-align:left;">
--0.116±0.15 (0.44)<br />
-0.89
+-0.157±0.154 (0.307)<br />
+0.855
 </td>
 <td style="text-align:left;">
-0.952±0.621 (0.125)<br />
-2.591
+0.821±0.583 (0.159)<br />
+2.273
 </td>
 <td style="text-align:left;">
-0.321±0.114 (0.005)<br />
-1.379
+0.322±0.129 (0.012)<br />
+1.38
 </td>
 </tr>
 <tr>
@@ -2176,16 +2216,16 @@ income_range0
 income_range1
 </td>
 <td style="text-align:left;">
-0.061±0.126 (0.628)<br />
-1.063
+0.048±0.131 (0.715)<br />
+1.049
 </td>
 <td style="text-align:left;">
-0.534±0.635 (0.4)<br />
-1.706
+0.442±0.595 (0.457)<br />
+1.556
 </td>
 <td style="text-align:left;">
-0.584±0.099 (&lt;0.0001)<br />
-1.793
+0.457±0.11 (&lt;0.0001)<br />
+1.579
 </td>
 </tr>
 <tr>
@@ -2193,16 +2233,16 @@ income_range1
 income_range2
 </td>
 <td style="text-align:left;">
-0.136±0.158 (0.392)<br />
-1.146
+0.034±0.162 (0.833)<br />
+1.035
 </td>
 <td style="text-align:left;">
--0.559±1.098 (0.611)<br />
-0.572
+-0.59±0.996 (0.554)<br />
+0.554
 </td>
 <td style="text-align:left;">
-0.433±0.126 (&lt;0.001)<br />
-1.542
+0.431±0.139 (0.002)<br />
+1.539
 </td>
 </tr>
 <tr>
@@ -2210,16 +2250,16 @@ income_range2
 income_range3
 </td>
 <td style="text-align:left;">
-0.012±0.16 (0.942)<br />
-1.012
+0.007±0.166 (0.967)<br />
+1.007
 </td>
 <td style="text-align:left;">
-0.726±0.735 (0.323)<br />
-2.067
+0.385±0.704 (0.585)<br />
+1.47
 </td>
 <td style="text-align:left;">
-0.378±0.125 (0.002)<br />
-1.459
+0.407±0.141 (0.004)<br />
+1.502
 </td>
 </tr>
 <tr>
@@ -2227,16 +2267,16 @@ income_range3
 income_range4
 </td>
 <td style="text-align:left;">
--0.1±0.139 (0.472)<br />
-0.905
+-0.151±0.143 (0.291)<br />
+0.86
 </td>
 <td style="text-align:left;">
-0.075±0.724 (0.917)<br />
-1.078
+-0.051±0.689 (0.941)<br />
+0.95
 </td>
 <td style="text-align:left;">
-0.18±0.106 (0.09)<br />
-1.197
+0.24±0.12 (0.046)<br />
+1.271
 </td>
 </tr>
 <tr>
@@ -2244,84 +2284,118 @@ income_range4
 income_range5
 </td>
 <td style="text-align:left;">
-0.091±0.126 (0.471)<br />
-1.095
+0.09±0.13 (0.49)<br />
+1.094
 </td>
 <td style="text-align:left;">
--0.454±0.828 (0.584)<br />
-0.635
+-0.451±0.761 (0.553)<br />
+0.637
 </td>
 <td style="text-align:left;">
-0.297±0.099 (0.003)<br />
-1.346
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceA
-</td>
-<td style="text-align:left;">
--0.197±0.261 (0.452)<br />
-0.821
-</td>
-<td style="text-align:left;">
-1.478±0.793 (0.062)<br />
-4.384
-</td>
-<td style="text-align:left;">
--0.529±0.203 (0.009)<br />
-0.589
+0.373±0.112 (&lt;0.001)<br />
+1.452
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceB
+ac3mo_copay_rng[10,30)
 </td>
 <td style="text-align:left;">
--0.462±0.122 (&lt;0.001)<br />
-0.63
+-0.299±0.121 (0.014)<br />
+0.742
 </td>
 <td style="text-align:left;">
--0.273±0.591 (0.645)<br />
-0.761
+-0.026±0.667 (0.969)<br />
+0.974
 </td>
 <td style="text-align:left;">
--0.329±0.092 (&lt;0.001)<br />
-0.72
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceH
-</td>
-<td style="text-align:left;">
--0.193±0.166 (0.244)<br />
-0.824
-</td>
-<td style="text-align:left;">
-0.276±0.767 (0.719)<br />
-1.318
-</td>
-<td style="text-align:left;">
--0.203±0.126 (0.107)<br />
-0.816
+-0.007±0.082 (0.934)<br />
+0.993
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceU
+ac3mo_copay_rng[100,250)
 </td>
 <td style="text-align:left;">
-0.17±0.197 (0.389)<br />
-1.185
+0.498±0.172 (0.004)<br />
+1.645
 </td>
 <td style="text-align:left;">
--1.754±1.765 (0.32)<br />
-0.173
+0.071±1.056 (0.946)<br />
+1.074
 </td>
 <td style="text-align:left;">
--0.111±0.159 (0.485)<br />
-0.895
+-3.165±0.194 (&lt;0.0001)<br />
+0.042
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[250,500)
+</td>
+<td style="text-align:left;">
+-0.6±0.293 (0.04)<br />
+0.549
+</td>
+<td style="text-align:left;">
+0.536±1.122 (0.633)<br />
+1.709
+</td>
+<td style="text-align:left;">
+-4.523±0.399 (&lt;0.0001)<br />
+0.011
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[30,50)
+</td>
+<td style="text-align:left;">
+0.683±0.101 (&lt;0.0001)<br />
+1.98
+</td>
+<td style="text-align:left;">
+1.121±0.489 (0.022)<br />
+3.068
+</td>
+<td style="text-align:left;">
+-2.97±0.104 (&lt;0.0001)<br />
+0.051
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[50,100)
+</td>
+<td style="text-align:left;">
+0.08±0.131 (0.541)<br />
+1.083
+</td>
+<td style="text-align:left;">
+0.355±0.656 (0.588)<br />
+1.426
+</td>
+<td style="text-align:left;">
+-3.75±0.161 (&lt;0.0001)<br />
+0.024
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng= 500
+</td>
+<td style="text-align:left;">
+-4.289±1.001 (&lt;0.0001)<br />
+0.014
+</td>
+<td style="text-align:left;">
+-0.147±1.126 (0.896)<br />
+0.863
+</td>
+<td style="text-align:left;">
+-6.327±0.74 (&lt;0.0001)<br />
+0.002
 </td>
 </tr>
 <tr>
@@ -2329,16 +2403,16 @@ raceU
 productEPO
 </td>
 <td style="text-align:left;">
--0.295±0.181 (0.102)<br />
-0.745
+-0.346±0.188 (0.066)<br />
+0.708
 </td>
 <td style="text-align:left;">
--0.096±0.86 (0.911)<br />
-0.908
+-0.452±0.842 (0.592)<br />
+0.636
 </td>
 <td style="text-align:left;">
--0.74±0.13 (&lt;0.0001)<br />
-0.477
+-0.619±0.152 (&lt;0.0001)<br />
+0.538
 </td>
 </tr>
 <tr>
@@ -2346,16 +2420,16 @@ productEPO
 productIND
 </td>
 <td style="text-align:left;">
-0.512±0.237 (0.031)<br />
-1.669
+0.839±0.251 (&lt;0.001)<br />
+2.314
 </td>
 <td style="text-align:left;">
-0.307±1.139 (0.788)<br />
-1.359
+0.229±1.074 (0.831)<br />
+1.257
 </td>
 <td style="text-align:left;">
-0.008±0.194 (0.968)<br />
-1.008
+0.389±0.229 (0.088)<br />
+1.476
 </td>
 </tr>
 <tr>
@@ -2363,16 +2437,16 @@ productIND
 productOTH
 </td>
 <td style="text-align:left;">
-0.959±0.126 (&lt;0.0001)<br />
-2.609
+1.006±0.133 (&lt;0.0001)<br />
+2.735
 </td>
 <td style="text-align:left;">
-0.426±0.597 (0.476)<br />
-1.531
+0.204±0.571 (0.722)<br />
+1.226
 </td>
 <td style="text-align:left;">
--0.164±0.102 (0.106)<br />
-0.849
+0.125±0.117 (0.282)<br />
+1.133
 </td>
 </tr>
 <tr>
@@ -2380,16 +2454,16 @@ productOTH
 productPOS
 </td>
 <td style="text-align:left;">
--0.186±0.11 (0.091)<br />
-0.83
+-0.204±0.117 (0.08)<br />
+0.815
 </td>
 <td style="text-align:left;">
--0.047±0.541 (0.93)<br />
-0.954
+-0.389±0.526 (0.459)<br />
+0.678
 </td>
 <td style="text-align:left;">
--0.9±0.081 (&lt;0.0001)<br />
-0.407
+-0.97±0.094 (&lt;0.0001)<br />
+0.379
 </td>
 </tr>
 <tr>
@@ -2397,16 +2471,928 @@ productPOS
 productPPO
 </td>
 <td style="text-align:left;">
-0.392±0.171 (0.022)<br />
-1.48
+0.327±0.178 (0.066)<br />
+1.387
 </td>
 <td style="text-align:left;">
--0.808±1.139 (0.478)<br />
-0.446
+-0.83±1.003 (0.408)<br />
+0.436
 </td>
 <td style="text-align:left;">
--0.075±0.133 (0.573)<br />
-0.928
+0.033±0.149 (0.826)<br />
+1.034
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="model-5-an-additional-one-to-include-variables-not-in-the-excel" class="section level2">
+<h2>Model 5: An additional one to include variables not in the Excel</h2>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + ac3mo_copay_range + product + age_s + male + race, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<caption>
+Model 5. Results of multinomial logistic regression model.<br />
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+DOAC
+</th>
+<th style="text-align:left;">
+Unknown/Multiple
+</th>
+<th style="text-align:left;">
+Warfarin
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+(Intercept)
+</td>
+<td style="text-align:left;">
+0.08±0.235 (0.733)<br />
+1.083
+</td>
+<td style="text-align:left;">
+-5.358±1.212 (&lt;0.0001)<br />
+0.005
+</td>
+<td style="text-align:left;">
+2.49±0.191 (&lt;0.0001)<br />
+12.061
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Lower.extremity.DVT
+</td>
+<td style="text-align:left;">
+-0.045±0.105 (0.672)<br />
+0.956
+</td>
+<td style="text-align:left;">
+-0.304±0.516 (0.555)<br />
+0.738
+</td>
+<td style="text-align:left;">
+0.173±0.087 (0.045)<br />
+1.189
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Other
+</td>
+<td style="text-align:left;">
+-0.278±0.126 (0.027)<br />
+0.757
+</td>
+<td style="text-align:left;">
+0.362±0.537 (0.5)<br />
+1.436
+</td>
+<td style="text-align:left;">
+0.189±0.101 (0.061)<br />
+1.208
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Pulmonary.embolism
+</td>
+<td style="text-align:left;">
+-0.201±0.112 (0.073)<br />
+0.818
+</td>
+<td style="text-align:left;">
+-0.5±0.562 (0.374)<br />
+0.607
+</td>
+<td style="text-align:left;">
+-0.142±0.093 (0.126)<br />
+0.868
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Upper.extremity.DVT
+</td>
+<td style="text-align:left;">
+-0.033±0.139 (0.815)<br />
+0.968
+</td>
+<td style="text-align:left;">
+-0.851±0.784 (0.277)<br />
+0.427
+</td>
+<td style="text-align:left;">
+0.005±0.114 (0.965)<br />
+1.005
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_ivc_rv_pv
+</td>
+<td style="text-align:left;">
+-0.628±0.265 (0.018)<br />
+0.534
+</td>
+<td style="text-align:left;">
+-2.128±2.777 (0.443)<br />
+0.119
+</td>
+<td style="text-align:left;">
+-0.319±0.195 (0.101)<br />
+0.727
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.174±0.149 (0.243)<br />
+0.84
+</td>
+<td style="text-align:left;">
+-0.247±0.721 (0.732)<br />
+0.781
+</td>
+<td style="text-align:left;">
+0.296±0.121 (0.015)<br />
+1.344
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.14±0.106 (0.19)<br />
+0.869
+</td>
+<td style="text-align:left;">
+-0.286±0.541 (0.596)<br />
+0.751
+</td>
+<td style="text-align:left;">
+0.012±0.088 (0.889)<br />
+1.012
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Brain.CNS
+</td>
+<td style="text-align:left;">
+-0.848±0.268 (0.002)<br />
+0.428
+</td>
+<td style="text-align:left;">
+0.391±1.102 (0.723)<br />
+1.478
+</td>
+<td style="text-align:left;">
+-0.562±0.203 (0.006)<br />
+0.57
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Breast
+</td>
+<td style="text-align:left;">
+0.415±0.154 (0.007)<br />
+1.514
+</td>
+<td style="text-align:left;">
+0.25±0.839 (0.766)<br />
+1.284
+</td>
+<td style="text-align:left;">
+0.55±0.13 (&lt;0.0001)<br />
+1.733
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gastrointestinal
+</td>
+<td style="text-align:left;">
+-0.391±0.125 (0.002)<br />
+0.676
+</td>
+<td style="text-align:left;">
+0.544±0.468 (0.246)<br />
+1.723
+</td>
+<td style="text-align:left;">
+-0.233±0.1 (0.019)<br />
+0.792
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Genitourinary
+</td>
+<td style="text-align:left;">
+0.188±0.166 (0.258)<br />
+1.207
+</td>
+<td style="text-align:left;">
+0.745±0.678 (0.272)<br />
+2.106
+</td>
+<td style="text-align:left;">
+0.479±0.143 (&lt;0.001)<br />
+1.614
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gynecololgic
+</td>
+<td style="text-align:left;">
+-0.431±0.24 (0.073)<br />
+0.65
+</td>
+<td style="text-align:left;">
+-1.135±2.544 (0.655)<br />
+0.321
+</td>
+<td style="text-align:left;">
+-0.312±0.189 (0.099)<br />
+0.732
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Hematologic
+</td>
+<td style="text-align:left;">
+0.018±0.144 (0.9)<br />
+1.018
+</td>
+<td style="text-align:left;">
+0.99±0.513 (0.054)<br />
+2.691
+</td>
+<td style="text-align:left;">
+0.001±0.122 (0.99)<br />
+1.001
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Lung
+</td>
+<td style="text-align:left;">
+-0.499±0.157 (0.001)<br />
+0.607
+</td>
+<td style="text-align:left;">
+0.828±0.631 (0.189)<br />
+2.289
+</td>
+<td style="text-align:left;">
+-0.209±0.126 (0.096)<br />
+0.811
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Other
+</td>
+<td style="text-align:left;">
+-0.232±0.09 (0.01)<br />
+0.793
+</td>
+<td style="text-align:left;">
+-0.087±0.396 (0.827)<br />
+0.917
+</td>
+<td style="text-align:left;">
+-0.191±0.072 (0.008)<br />
+0.826
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+charlson_comorb_score
+</td>
+<td style="text-align:left;">
+-0.018±0.022 (0.411)<br />
+0.982
+</td>
+<td style="text-align:left;">
+-0.147±0.117 (0.211)<br />
+0.863
+</td>
+<td style="text-align:left;">
+0.019±0.019 (0.3)<br />
+1.019
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionEAST SOUTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.999±0.232 (&lt;0.0001)<br />
+2.716
+</td>
+<td style="text-align:left;">
+1.82±0.982 (0.064)<br />
+6.172
+</td>
+<td style="text-align:left;">
+0.719±0.21 (&lt;0.001)<br />
+2.052
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionMIDDLE ATLANTIC
+</td>
+<td style="text-align:left;">
+-0.087±0.172 (0.615)<br />
+0.917
+</td>
+<td style="text-align:left;">
+-1.681±2.335 (0.471)<br />
+0.186
+</td>
+<td style="text-align:left;">
+-0.777±0.146 (&lt;0.0001)<br />
+0.46
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionMOUNTAIN
+</td>
+<td style="text-align:left;">
+0.275±0.167 (0.099)<br />
+1.317
+</td>
+<td style="text-align:left;">
+1.466±0.809 (0.07)<br />
+4.332
+</td>
+<td style="text-align:left;">
+0.609±0.142 (&lt;0.0001)<br />
+1.839
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionNEW ENGLAND
+</td>
+<td style="text-align:left;">
+-1.209±0.243 (&lt;0.0001)<br />
+0.298
+</td>
+<td style="text-align:left;">
+0.152±1.2 (0.899)<br />
+1.164
+</td>
+<td style="text-align:left;">
+-0.703±0.172 (&lt;0.0001)<br />
+0.495
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionPACIFIC
+</td>
+<td style="text-align:left;">
+0.155±0.168 (0.356)<br />
+1.168
+</td>
+<td style="text-align:left;">
+-0.356±1.176 (0.762)<br />
+0.7
+</td>
+<td style="text-align:left;">
+0.092±0.141 (0.515)<br />
+1.096
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionSOUTH ATLANTIC
+</td>
+<td style="text-align:left;">
+0.266±0.122 (0.029)<br />
+1.305
+</td>
+<td style="text-align:left;">
+1.373±0.706 (0.052)<br />
+3.947
+</td>
+<td style="text-align:left;">
+0.033±0.104 (0.749)<br />
+1.034
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionUNKNOWN
+</td>
+<td style="text-align:left;">
+-0.319±0.956 (0.739)<br />
+0.727
+</td>
+<td style="text-align:left;">
+-0.823±5.515 (0.881)<br />
+0.439
+</td>
+<td style="text-align:left;">
+0.806±0.706 (0.253)<br />
+2.239
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionWEST NORTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.031±0.157 (0.843)<br />
+1.031
+</td>
+<td style="text-align:left;">
+0.831±0.859 (0.333)<br />
+2.296
+</td>
+<td style="text-align:left;">
+-0.096±0.128 (0.452)<br />
+0.908
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionWEST SOUTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.293±0.146 (0.045)<br />
+1.34
+</td>
+<td style="text-align:left;">
+0.252±0.933 (0.787)<br />
+1.287
+</td>
+<td style="text-align:left;">
+0.278±0.125 (0.026)<br />
+1.32
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2AB
+</td>
+<td style="text-align:left;">
+-0.087±0.099 (0.375)<br />
+0.917
+</td>
+<td style="text-align:left;">
+-0.318±0.468 (0.497)<br />
+0.728
+</td>
+<td style="text-align:left;">
+0.065±0.083 (0.43)<br />
+1.067
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2D
+</td>
+<td style="text-align:left;">
+-0.332±0.113 (0.003)<br />
+0.717
+</td>
+<td style="text-align:left;">
+-0.684±0.579 (0.238)<br />
+0.505
+</td>
+<td style="text-align:left;">
+-0.236±0.096 (0.014)<br />
+0.79
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2U
+</td>
+<td style="text-align:left;">
+-0.221±0.34 (0.516)<br />
+0.802
+</td>
+<td style="text-align:left;">
+0.551±1.624 (0.734)<br />
+1.735
+</td>
+<td style="text-align:left;">
+0.019±0.299 (0.948)<br />
+1.019
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range0
+</td>
+<td style="text-align:left;">
+-0.128±0.155 (0.409)<br />
+0.88
+</td>
+<td style="text-align:left;">
+0.939±0.588 (0.11)<br />
+2.557
+</td>
+<td style="text-align:left;">
+0.343±0.13 (0.008)<br />
+1.409
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range1
+</td>
+<td style="text-align:left;">
+-0.023±0.134 (0.863)<br />
+0.977
+</td>
+<td style="text-align:left;">
+0.474±0.625 (0.448)<br />
+1.606
+</td>
+<td style="text-align:left;">
+0.345±0.113 (0.002)<br />
+1.412
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range2
+</td>
+<td style="text-align:left;">
+0.029±0.165 (0.859)<br />
+1.029
+</td>
+<td style="text-align:left;">
+-0.672±1.059 (0.525)<br />
+0.511
+</td>
+<td style="text-align:left;">
+0.408±0.142 (0.004)<br />
+1.504
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range3
+</td>
+<td style="text-align:left;">
+-0.022±0.167 (0.896)<br />
+0.978
+</td>
+<td style="text-align:left;">
+0.388±0.725 (0.592)<br />
+1.474
+</td>
+<td style="text-align:left;">
+0.349±0.143 (0.014)<br />
+1.418
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range4
+</td>
+<td style="text-align:left;">
+-0.17±0.144 (0.237)<br />
+0.844
+</td>
+<td style="text-align:left;">
+-0.101±0.7 (0.885)<br />
+0.904
+</td>
+<td style="text-align:left;">
+0.198±0.121 (0.102)<br />
+1.219
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range5
+</td>
+<td style="text-align:left;">
+0.085±0.131 (0.517)<br />
+1.089
+</td>
+<td style="text-align:left;">
+-0.404±0.762 (0.596)<br />
+0.668
+</td>
+<td style="text-align:left;">
+0.372±0.113 (&lt;0.001)<br />
+1.451
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[10,30)
+</td>
+<td style="text-align:left;">
+-0.284±0.122 (0.02)<br />
+0.753
+</td>
+<td style="text-align:left;">
+0.183±0.664 (0.782)<br />
+1.201
+</td>
+<td style="text-align:left;">
+0.025±0.083 (0.763)<br />
+1.025
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[100,250)
+</td>
+<td style="text-align:left;">
+0.402±0.173 (0.02)<br />
+1.495
+</td>
+<td style="text-align:left;">
+0.213±1.063 (0.841)<br />
+1.237
+</td>
+<td style="text-align:left;">
+-3.268±0.196 (&lt;0.0001)<br />
+0.038
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[250,500)
+</td>
+<td style="text-align:left;">
+-0.7±0.295 (0.018)<br />
+0.497
+</td>
+<td style="text-align:left;">
+0.576±1.145 (0.615)<br />
+1.779
+</td>
+<td style="text-align:left;">
+-4.574±0.393 (&lt;0.0001)<br />
+0.01
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[30,50)
+</td>
+<td style="text-align:left;">
+0.654±0.102 (&lt;0.0001)<br />
+1.923
+</td>
+<td style="text-align:left;">
+1.275±0.514 (0.013)<br />
+3.579
+</td>
+<td style="text-align:left;">
+-3.003±0.105 (&lt;0.0001)<br />
+0.05
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng[50,100)
+</td>
+<td style="text-align:left;">
+0.057±0.132 (0.664)<br />
+1.059
+</td>
+<td style="text-align:left;">
+0.516±0.671 (0.442)<br />
+1.675
+</td>
+<td style="text-align:left;">
+-3.778±0.162 (&lt;0.0001)<br />
+0.023
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac3mo_copay_rng= 500
+</td>
+<td style="text-align:left;">
+-4.303±1.003 (&lt;0.0001)<br />
+0.014
+</td>
+<td style="text-align:left;">
+0.013±1.161 (0.991)<br />
+1.013
+</td>
+<td style="text-align:left;">
+-6.34±0.725 (&lt;0.0001)<br />
+0.002
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+productEPO
+</td>
+<td style="text-align:left;">
+-0.045±0.195 (0.818)<br />
+0.956
+</td>
+<td style="text-align:left;">
+-0.063±0.879 (0.943)<br />
+0.939
+</td>
+<td style="text-align:left;">
+-0.213±0.157 (0.176)<br />
+0.808
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+productIND
+</td>
+<td style="text-align:left;">
+0.626±0.253 (0.013)<br />
+1.87
+</td>
+<td style="text-align:left;">
+0.125±1.103 (0.91)<br />
+1.133
+</td>
+<td style="text-align:left;">
+0.152±0.231 (0.511)<br />
+1.164
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+productOTH
+</td>
+<td style="text-align:left;">
+0.896±0.134 (&lt;0.0001)<br />
+2.45
+</td>
+<td style="text-align:left;">
+0.192±0.601 (0.749)<br />
+1.212
+</td>
+<td style="text-align:left;">
+0.01±0.118 (0.931)<br />
+1.01
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+productPOS
+</td>
+<td style="text-align:left;">
+0.084±0.127 (0.508)<br />
+1.088
+</td>
+<td style="text-align:left;">
+0.038±0.582 (0.949)<br />
+1.039
+</td>
+<td style="text-align:left;">
+-0.595±0.102 (&lt;0.0001)<br />
+0.552
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+productPPO
+</td>
+<td style="text-align:left;">
+0.297±0.18 (0.099)<br />
+1.346
+</td>
+<td style="text-align:left;">
+-0.824±1.051 (0.433)<br />
+0.439
+</td>
+<td style="text-align:left;">
+0.032±0.15 (0.83)<br />
+1.033
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+age_s
+</td>
+<td style="text-align:left;">
+0.345±0.053 (&lt;0.0001)<br />
+1.412
+</td>
+<td style="text-align:left;">
+0.357±0.264 (0.177)<br />
+1.429
+</td>
+<td style="text-align:left;">
+0.428±0.043 (&lt;0.0001)<br />
+1.534
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+male
+</td>
+<td style="text-align:left;">
+0.11±0.093 (0.236)<br />
+1.116
+</td>
+<td style="text-align:left;">
+0.726±0.432 (0.093)<br />
+2.067
+</td>
+<td style="text-align:left;">
+0.086±0.077 (0.269)<br />
+1.09
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raceA
+</td>
+<td style="text-align:left;">
+-0.103±0.27 (0.702)<br />
+0.902
+</td>
+<td style="text-align:left;">
+1.626±0.796 (0.041)<br />
+5.083
+</td>
+<td style="text-align:left;">
+-0.634±0.224 (0.005)<br />
+0.53
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raceB
+</td>
+<td style="text-align:left;">
+-0.422±0.128 (&lt;0.001)<br />
+0.656
+</td>
+<td style="text-align:left;">
+-0.168±0.575 (0.77)<br />
+0.845
+</td>
+<td style="text-align:left;">
+-0.308±0.106 (0.004)<br />
+0.735
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raceH
+</td>
+<td style="text-align:left;">
+-0.168±0.173 (0.331)<br />
+0.845
+</td>
+<td style="text-align:left;">
+0.31±0.758 (0.683)<br />
+1.363
+</td>
+<td style="text-align:left;">
+-0.175±0.143 (0.22)<br />
+0.839
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raceU
+</td>
+<td style="text-align:left;">
+0.081±0.205 (0.694)<br />
+1.084
+</td>
+<td style="text-align:left;">
+-1.273±1.488 (0.392)<br />
+0.28
+</td>
+<td style="text-align:left;">
+-0.011±0.185 (0.954)<br />
+0.989
 </td>
 </tr>
 </tbody>
@@ -2427,18 +3413,17 @@ productPPO
 <li><p>Compared to white patients, the relative probability of AC3Mo being DOACs over LMWH is lower than patients of any other races but unknown, holding other covariates constant. Compared to white patients, the relative probability of AC3Mo being warfarin over LMWH is lower than patients of any other races, holding other covariates constant.</p></li>
 </ul>
 </div>
-</div>
 <div id="multinomial-logistic-regression-on-ac-at-4-months" class="section level1">
 <h1>Multinomial logistic regression on AC at 4 months</h1>
-<div id="model-1-1" class="section level2">
-<h2>Model 1:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
-<p>i.e. LMWH is the reference level for AC3Mo.</p>
+<div id="model-1-1" class="section level3">
+<h3>Model 1:</h3>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<p>i.e. LMWH is the reference level for AC4Mo.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 1. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -2556,6 +3541,40 @@ VTE_ivc_rv_pv
 <td style="text-align:left;">
 -0.595±0.183 (0.001)<br />
 0.552
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.286±0.151 (0.059)<br />
+0.751
+</td>
+<td style="text-align:left;">
+0.533±1.094 (0.626)<br />
+1.704
+</td>
+<td style="text-align:left;">
+0.042±0.115 (0.717)<br />
+1.043
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.217±0.116 (0.06)<br />
+0.805
+</td>
+<td style="text-align:left;">
+0.012±1.097 (0.991)<br />
+1.012
+</td>
+<td style="text-align:left;">
+-0.101±0.091 (0.266)<br />
+0.904
 </td>
 </tr>
 <tr>
@@ -2711,51 +3730,17 @@ charlson_comorb_score
 1.138
 </td>
 </tr>
-<tr>
-<td style="text-align:left;">
-vte_history
-</td>
-<td style="text-align:left;">
--0.286±0.151 (0.059)<br />
-0.751
-</td>
-<td style="text-align:left;">
-0.533±1.094 (0.626)<br />
-1.704
-</td>
-<td style="text-align:left;">
-0.042±0.115 (0.717)<br />
-1.043
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-hospitalizedTRUE
-</td>
-<td style="text-align:left;">
--0.217±0.116 (0.06)<br />
-0.805
-</td>
-<td style="text-align:left;">
-0.012±1.097 (0.991)<br />
-1.012
-</td>
-<td style="text-align:left;">
--0.101±0.091 (0.266)<br />
-0.904
-</td>
-</tr>
 </tbody>
 </table>
 </div>
-<div id="model-2-1" class="section level2">
-<h2>Model 2:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<div id="model-2-1" class="section level3">
+<h3>Model 2:</h3>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 2. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -2873,6 +3858,40 @@ VTE_ivc_rv_pv
 <td style="text-align:left;">
 -0.534±0.185 (0.004)<br />
 0.586
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.28±0.152 (0.065)<br />
+0.756
+</td>
+<td style="text-align:left;">
+0.263±1.128 (0.816)<br />
+1.301
+</td>
+<td style="text-align:left;">
+0.061±0.116 (0.598)<br />
+1.063
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.223±0.116 (0.055)<br />
+0.8
+</td>
+<td style="text-align:left;">
+0.13±1.119 (0.908)<br />
+1.139
+</td>
+<td style="text-align:left;">
+-0.1±0.092 (0.277)<br />
+0.905
 </td>
 </tr>
 <tr>
@@ -3026,40 +4045,6 @@ charlson_comorb_score
 <td style="text-align:left;">
 0.137±0.019 (&lt;0.0001)<br />
 1.147
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-vte_history
-</td>
-<td style="text-align:left;">
--0.28±0.152 (0.065)<br />
-0.756
-</td>
-<td style="text-align:left;">
-0.263±1.128 (0.816)<br />
-1.301
-</td>
-<td style="text-align:left;">
-0.061±0.116 (0.598)<br />
-1.063
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-hospitalizedTRUE
-</td>
-<td style="text-align:left;">
--0.223±0.116 (0.055)<br />
-0.8
-</td>
-<td style="text-align:left;">
-0.13±1.119 (0.908)<br />
-1.139
-</td>
-<td style="text-align:left;">
--0.1±0.092 (0.277)<br />
-0.905
 </td>
 </tr>
 <tr>
@@ -3220,12 +4205,12 @@ divisionWEST SOUTH CENTRAL
 </div>
 <div id="model-3-1" class="section level2">
 <h2>Model 3:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + ac4mo_copay_range, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Model 3. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
 </caption>
 <thead>
 <tr>
@@ -3248,16 +4233,16 @@ Warfarin
 (Intercept)
 </td>
 <td style="text-align:left;">
-0.46±0.217 (0.034)<br />
-1.584
+0.318±0.234 (0.174)<br />
+1.374
 </td>
 <td style="text-align:left;">
--12.269±9.977 (0.219)<br />
+-13.425±6.578 (0.041)<br />
 0
 </td>
 <td style="text-align:left;">
-1.374±0.172 (&lt;0.0001)<br />
-3.951
+2.062±0.197 (&lt;0.0001)<br />
+7.862
 </td>
 </tr>
 <tr>
@@ -3265,706 +4250,15 @@ Warfarin
 VTE_Lower.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.029±0.113 (0.795)<br />
-0.971
+-0.016±0.116 (0.891)<br />
+0.984
 </td>
 <td style="text-align:left;">
-0.644±0.93 (0.489)<br />
-1.904
+1.065±0.983 (0.279)<br />
+2.901
 </td>
 <td style="text-align:left;">
-0.18±0.089 (0.043)<br />
-1.197
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-VTE_Other
-</td>
-<td style="text-align:left;">
--0.417±0.137 (0.002)<br />
-0.659
-</td>
-<td style="text-align:left;">
-0.567±0.987 (0.566)<br />
-1.763
-</td>
-<td style="text-align:left;">
-0.175±0.104 (0.092)<br />
-1.191
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-VTE_Pulmonary.embolism
-</td>
-<td style="text-align:left;">
--0.126±0.12 (0.295)<br />
-0.882
-</td>
-<td style="text-align:left;">
--0.23±1.043 (0.825)<br />
-0.795
-</td>
-<td style="text-align:left;">
--0.05±0.095 (0.602)<br />
-0.951
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-VTE_Upper.extremity.DVT
-</td>
-<td style="text-align:left;">
--0.198±0.151 (0.188)<br />
-0.82
-</td>
-<td style="text-align:left;">
--0.128±1.245 (0.918)<br />
-0.88
-</td>
-<td style="text-align:left;">
-0.016±0.119 (0.893)<br />
-1.016
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-VTE_ivc_rv_pv
-</td>
-<td style="text-align:left;">
--1.158±0.301 (&lt;0.001)<br />
-0.314
-</td>
-<td style="text-align:left;">
--3.363±13.473 (0.803)<br />
-0.035
-</td>
-<td style="text-align:left;">
--0.498±0.188 (0.008)<br />
-0.608
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Brain.CNS
-</td>
-<td style="text-align:left;">
--1.078±0.287 (&lt;0.001)<br />
-0.34
-</td>
-<td style="text-align:left;">
--0.889±6.995 (0.899)<br />
-0.411
-</td>
-<td style="text-align:left;">
--0.848±0.202 (&lt;0.0001)<br />
-0.428
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Breast
-</td>
-<td style="text-align:left;">
-0.341±0.16 (0.033)<br />
-1.406
-</td>
-<td style="text-align:left;">
-3.086±1.63 (0.058)<br />
-21.889
-</td>
-<td style="text-align:left;">
-0.431±0.129 (&lt;0.001)<br />
-1.539
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gastrointestinal
-</td>
-<td style="text-align:left;">
--0.41±0.133 (0.002)<br />
-0.664
-</td>
-<td style="text-align:left;">
-1.83±1.132 (0.106)<br />
-6.234
-</td>
-<td style="text-align:left;">
--0.325±0.101 (0.001)<br />
-0.723
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Genitourinary
-</td>
-<td style="text-align:left;">
-0.253±0.174 (0.146)<br />
-1.288
-</td>
-<td style="text-align:left;">
-0.262±3.85 (0.946)<br />
-1.3
-</td>
-<td style="text-align:left;">
-0.564±0.142 (&lt;0.0001)<br />
-1.758
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gynecololgic
-</td>
-<td style="text-align:left;">
--0.53±0.246 (0.031)<br />
-0.589
-</td>
-<td style="text-align:left;">
--3.217±19.676 (0.87)<br />
-0.04
-</td>
-<td style="text-align:left;">
--0.447±0.182 (0.014)<br />
-0.64
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Hematologic
-</td>
-<td style="text-align:left;">
--0.042±0.158 (0.79)<br />
-0.959
-</td>
-<td style="text-align:left;">
--2.359±5.425 (0.664)<br />
-0.095
-</td>
-<td style="text-align:left;">
--0.05±0.126 (0.692)<br />
-0.951
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Lung
-</td>
-<td style="text-align:left;">
--0.427±0.169 (0.012)<br />
-0.652
-</td>
-<td style="text-align:left;">
-3.513±1.495 (0.019)<br />
-33.549
-</td>
-<td style="text-align:left;">
--0.305±0.13 (0.019)<br />
-0.737
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Other
-</td>
-<td style="text-align:left;">
--0.341±0.097 (&lt;0.001)<br />
-0.711
-</td>
-<td style="text-align:left;">
-0.843±0.65 (0.195)<br />
-2.323
-</td>
-<td style="text-align:left;">
--0.364±0.073 (&lt;0.0001)<br />
-0.695
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-charlson_comorb_score
-</td>
-<td style="text-align:left;">
-0.071±0.024 (0.003)<br />
-1.074
-</td>
-<td style="text-align:left;">
--0.163±0.303 (0.591)<br />
-0.85
-</td>
-<td style="text-align:left;">
-0.11±0.02 (&lt;0.0001)<br />
-1.116
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-vte_history
-</td>
-<td style="text-align:left;">
--0.259±0.152 (0.089)<br />
-0.772
-</td>
-<td style="text-align:left;">
-0.461±1.146 (0.687)<br />
-1.586
-</td>
-<td style="text-align:left;">
-0.088±0.117 (0.455)<br />
-1.092
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-hospitalizedTRUE
-</td>
-<td style="text-align:left;">
--0.223±0.117 (0.056)<br />
-0.8
-</td>
-<td style="text-align:left;">
-0.111±1.156 (0.924)<br />
-1.117
-</td>
-<td style="text-align:left;">
--0.093±0.093 (0.318)<br />
-0.911
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionEAST SOUTH CENTRAL
-</td>
-<td style="text-align:left;">
-0.645±0.255 (0.011)<br />
-1.906
-</td>
-<td style="text-align:left;">
-6.377±9.823 (0.516)<br />
-588.161
-</td>
-<td style="text-align:left;">
-0.626±0.219 (0.004)<br />
-1.87
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionMIDDLE ATLANTIC
-</td>
-<td style="text-align:left;">
--0.249±0.18 (0.166)<br />
-0.78
-</td>
-<td style="text-align:left;">
--2.939±48.014 (0.951)<br />
-0.053
-</td>
-<td style="text-align:left;">
--0.767±0.146 (&lt;0.0001)<br />
-0.464
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionMOUNTAIN
-</td>
-<td style="text-align:left;">
-0.281±0.182 (0.122)<br />
-1.324
-</td>
-<td style="text-align:left;">
-1.488±11.389 (0.896)<br />
-4.428
-</td>
-<td style="text-align:left;">
-0.637±0.15 (&lt;0.0001)<br />
-1.891
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionNEW ENGLAND
-</td>
-<td style="text-align:left;">
--1.332±0.252 (&lt;0.0001)<br />
-0.264
-</td>
-<td style="text-align:left;">
-5.078±9.828 (0.605)<br />
-160.453
-</td>
-<td style="text-align:left;">
--0.645±0.159 (&lt;0.0001)<br />
-0.525
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionPACIFIC
-</td>
-<td style="text-align:left;">
-0.099±0.178 (0.58)<br />
-1.104
-</td>
-<td style="text-align:left;">
--0.586±16.78 (0.972)<br />
-0.557
-</td>
-<td style="text-align:left;">
-0.292±0.145 (0.043)<br />
-1.339
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionSOUTH ATLANTIC
-</td>
-<td style="text-align:left;">
-0.257±0.129 (0.046)<br />
-1.293
-</td>
-<td style="text-align:left;">
-5.255±9.783 (0.591)<br />
-191.521
-</td>
-<td style="text-align:left;">
-0.017±0.105 (0.874)<br />
-1.017
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionUNKNOWN
-</td>
-<td style="text-align:left;">
--1.039±1.241 (0.403)<br />
-0.354
-</td>
-<td style="text-align:left;">
-2.518±34.214 (0.941)<br />
-12.404
-</td>
-<td style="text-align:left;">
-1.03±0.741 (0.165)<br />
-2.801
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionWEST NORTH CENTRAL
-</td>
-<td style="text-align:left;">
--0.015±0.172 (0.93)<br />
-0.985
-</td>
-<td style="text-align:left;">
--0.606±17.143 (0.972)<br />
-0.546
-</td>
-<td style="text-align:left;">
-0.097±0.137 (0.48)<br />
-1.102
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-divisionWEST SOUTH CENTRAL
-</td>
-<td style="text-align:left;">
-0.056±0.157 (0.721)<br />
-1.058
-</td>
-<td style="text-align:left;">
-4.836±9.827 (0.623)<br />
-125.964
-</td>
-<td style="text-align:left;">
-0.018±0.127 (0.89)<br />
-1.018
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-education2AB
-</td>
-<td style="text-align:left;">
--0.043±0.106 (0.686)<br />
-0.958
-</td>
-<td style="text-align:left;">
--1.246±1.204 (0.301)<br />
-0.288
-</td>
-<td style="text-align:left;">
-0.059±0.086 (0.492)<br />
-1.061
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-education2D
-</td>
-<td style="text-align:left;">
--0.155±0.122 (0.202)<br />
-0.856
-</td>
-<td style="text-align:left;">
-0.324±1.058 (0.76)<br />
-1.383
-</td>
-<td style="text-align:left;">
--0.187±0.098 (0.056)<br />
-0.829
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-education2U
-</td>
-<td style="text-align:left;">
-0.331±0.369 (0.369)<br />
-1.392
-</td>
-<td style="text-align:left;">
-1.536±16.023 (0.924)<br />
-4.646
-</td>
-<td style="text-align:left;">
-0.326±0.309 (0.29)<br />
-1.385
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range0
-</td>
-<td style="text-align:left;">
-0.045±0.168 (0.79)<br />
-1.046
-</td>
-<td style="text-align:left;">
--3.096±5.422 (0.568)<br />
-0.045
-</td>
-<td style="text-align:left;">
-0.496±0.134 (&lt;0.001)<br />
-1.642
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range1
-</td>
-<td style="text-align:left;">
-0.366±0.137 (0.007)<br />
-1.442
-</td>
-<td style="text-align:left;">
-1.203±1.152 (0.296)<br />
-3.33
-</td>
-<td style="text-align:left;">
-0.931±0.112 (&lt;0.0001)<br />
-2.537
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range2
-</td>
-<td style="text-align:left;">
-0.558±0.182 (0.002)<br />
-1.747
-</td>
-<td style="text-align:left;">
--1.958±5.279 (0.711)<br />
-0.141
-</td>
-<td style="text-align:left;">
-0.873±0.153 (&lt;0.0001)<br />
-2.394
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range3
-</td>
-<td style="text-align:left;">
-0.306±0.181 (0.091)<br />
-1.358
-</td>
-<td style="text-align:left;">
-1.224±1.291 (0.343)<br />
-3.401
-</td>
-<td style="text-align:left;">
-0.681±0.148 (&lt;0.0001)<br />
-1.976
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range4
-</td>
-<td style="text-align:left;">
-0.002±0.154 (0.987)<br />
-1.002
-</td>
-<td style="text-align:left;">
--3.569±7.909 (0.652)<br />
-0.028
-</td>
-<td style="text-align:left;">
-0.291±0.121 (0.017)<br />
-1.338
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-income_range5
-</td>
-<td style="text-align:left;">
-0.2±0.14 (0.154)<br />
-1.221
-</td>
-<td style="text-align:left;">
-0.249±1.28 (0.845)<br />
-1.283
-</td>
-<td style="text-align:left;">
-0.438±0.115 (&lt;0.001)<br />
-1.55
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceA
-</td>
-<td style="text-align:left;">
--0.166±0.293 (0.571)<br />
-0.847
-</td>
-<td style="text-align:left;">
-1.748±1.263 (0.167)<br />
-5.743
-</td>
-<td style="text-align:left;">
--0.479±0.238 (0.044)<br />
-0.619
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceB
-</td>
-<td style="text-align:left;">
--0.487±0.134 (&lt;0.001)<br />
-0.614
-</td>
-<td style="text-align:left;">
--0.575±1.183 (0.627)<br />
-0.563
-</td>
-<td style="text-align:left;">
--0.385±0.106 (&lt;0.001)<br />
-0.68
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceH
-</td>
-<td style="text-align:left;">
--0.398±0.181 (0.028)<br />
-0.672
-</td>
-<td style="text-align:left;">
--3.752±12.032 (0.755)<br />
-0.023
-</td>
-<td style="text-align:left;">
--0.386±0.141 (0.006)<br />
-0.68
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceU
-</td>
-<td style="text-align:left;">
-0.09±0.227 (0.692)<br />
-1.094
-</td>
-<td style="text-align:left;">
--2.373±7.983 (0.766)<br />
-0.093
-</td>
-<td style="text-align:left;">
--0.083±0.189 (0.66)<br />
-0.92
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div id="model-4-1" class="section level2">
-<h2>Model 4:</h2>
-<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> index_vte_type + BMI + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + race + product, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
-<table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
-<caption>
-Model 4. Results of multinomial logistic regression model.<br />
-Output format: coefficient ± standard error (p-value from Wald test)<br />
-    exponentiated coefficient
-</caption>
-<thead>
-<tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:left;">
-DOAC
-</th>
-<th style="text-align:left;">
-Unknown/Multiple
-</th>
-<th style="text-align:left;">
-Warfarin
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:left;">
-0.527±0.244 (0.031)<br />
-1.694
-</td>
-<td style="text-align:left;">
--9.522±3.421 (0.005)<br />
-0
-</td>
-<td style="text-align:left;">
-2.114±0.193 (&lt;0.0001)<br />
-8.281
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-VTE_Lower.extremity.DVT
-</td>
-<td style="text-align:left;">
--0.068±0.113 (0.546)<br />
-0.934
-</td>
-<td style="text-align:left;">
-0.475±0.822 (0.564)<br />
-1.608
-</td>
-<td style="text-align:left;">
-0.129±0.089 (0.149)<br />
+0.129±0.099 (0.19)<br />
 1.138
 </td>
 </tr>
@@ -3973,16 +4267,16 @@ VTE_Lower.extremity.DVT
 VTE_Other
 </td>
 <td style="text-align:left;">
--0.376±0.137 (0.006)<br />
-0.687
+-0.397±0.14 (0.004)<br />
+0.672
 </td>
 <td style="text-align:left;">
-0.857±0.905 (0.344)<br />
-2.356
+0.755±1.041 (0.468)<br />
+2.128
 </td>
 <td style="text-align:left;">
-0.216±0.104 (0.038)<br />
-1.241
+0.049±0.115 (0.667)<br />
+1.05
 </td>
 </tr>
 <tr>
@@ -3990,16 +4284,16 @@ VTE_Other
 VTE_Pulmonary.embolism
 </td>
 <td style="text-align:left;">
--0.142±0.12 (0.238)<br />
-0.868
+-0.115±0.123 (0.352)<br />
+0.891
 </td>
 <td style="text-align:left;">
--0.086±0.927 (0.926)<br />
-0.918
+0.103±1.028 (0.92)<br />
+1.108
 </td>
 <td style="text-align:left;">
--0.071±0.095 (0.457)<br />
-0.931
+-0.073±0.106 (0.489)<br />
+0.93
 </td>
 </tr>
 <tr>
@@ -4007,16 +4301,16 @@ VTE_Pulmonary.embolism
 VTE_Upper.extremity.DVT
 </td>
 <td style="text-align:left;">
--0.161±0.151 (0.289)<br />
-0.851
+-0.121±0.154 (0.432)<br />
+0.886
 </td>
 <td style="text-align:left;">
-0.031±1.145 (0.978)<br />
-1.031
+-0.058±1.454 (0.968)<br />
+0.944
 </td>
 <td style="text-align:left;">
-0.078±0.119 (0.516)<br />
-1.081
+-0.149±0.131 (0.256)<br />
+0.862
 </td>
 </tr>
 <tr>
@@ -4024,169 +4318,16 @@ VTE_Upper.extremity.DVT
 VTE_ivc_rv_pv
 </td>
 <td style="text-align:left;">
--1.2±0.304 (&lt;0.0001)<br />
-0.301
+-1.12±0.306 (&lt;0.001)<br />
+0.326
 </td>
 <td style="text-align:left;">
--1.905±6.265 (0.761)<br />
-0.149
+-1.828±7.78 (0.814)<br />
+0.161
 </td>
 <td style="text-align:left;">
--0.531±0.188 (0.005)<br />
-0.588
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Brain.CNS
-</td>
-<td style="text-align:left;">
--0.839±0.286 (0.003)<br />
-0.432
-</td>
-<td style="text-align:left;">
-0.113±4.695 (0.981)<br />
-1.12
-</td>
-<td style="text-align:left;">
--0.672±0.206 (0.001)<br />
-0.511
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Breast
-</td>
-<td style="text-align:left;">
-0.42±0.161 (0.009)<br />
-1.522
-</td>
-<td style="text-align:left;">
-3.179±1.367 (0.02)<br />
-24.023
-</td>
-<td style="text-align:left;">
-0.475±0.131 (&lt;0.001)<br />
-1.608
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gastrointestinal
-</td>
-<td style="text-align:left;">
--0.354±0.133 (0.008)<br />
-0.702
-</td>
-<td style="text-align:left;">
-1.788±0.95 (0.06)<br />
-5.977
-</td>
-<td style="text-align:left;">
--0.282±0.102 (0.006)<br />
-0.754
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Genitourinary
-</td>
-<td style="text-align:left;">
-0.209±0.174 (0.228)<br />
-1.232
-</td>
-<td style="text-align:left;">
-1.303±1.972 (0.509)<br />
-3.68
-</td>
-<td style="text-align:left;">
-0.485±0.142 (&lt;0.001)<br />
-1.624
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Gynecololgic
-</td>
-<td style="text-align:left;">
--0.509±0.247 (0.04)<br />
-0.601
-</td>
-<td style="text-align:left;">
--1.346±7.083 (0.849)<br />
-0.26
-</td>
-<td style="text-align:left;">
--0.447±0.183 (0.015)<br />
-0.64
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Hematologic
-</td>
-<td style="text-align:left;">
-0.004±0.159 (0.981)<br />
-1.004
-</td>
-<td style="text-align:left;">
-0.033±2.267 (0.988)<br />
-1.034
-</td>
-<td style="text-align:left;">
--0.024±0.127 (0.848)<br />
-0.976
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Lung
-</td>
-<td style="text-align:left;">
--0.433±0.169 (0.011)<br />
-0.649
-</td>
-<td style="text-align:left;">
-3.217±1.227 (0.009)<br />
-24.953
-</td>
-<td style="text-align:left;">
--0.332±0.131 (0.011)<br />
-0.717
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-malignancy_Other
-</td>
-<td style="text-align:left;">
--0.295±0.098 (0.003)<br />
-0.745
-</td>
-<td style="text-align:left;">
-0.97±0.6 (0.106)<br />
-2.638
-</td>
-<td style="text-align:left;">
--0.315±0.074 (&lt;0.0001)<br />
-0.73
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-charlson_comorb_score
-</td>
-<td style="text-align:left;">
-0.036±0.024 (0.138)<br />
-1.037
-</td>
-<td style="text-align:left;">
-0.104±0.192 (0.587)<br />
-1.11
-</td>
-<td style="text-align:left;">
-0.072±0.02 (&lt;0.001)<br />
-1.075
+-0.587±0.217 (0.007)<br />
+0.556
 </td>
 </tr>
 <tr>
@@ -4194,16 +4335,16 @@ charlson_comorb_score
 vte_history
 </td>
 <td style="text-align:left;">
--0.211±0.153 (0.169)<br />
-0.81
+-0.278±0.156 (0.075)<br />
+0.757
 </td>
 <td style="text-align:left;">
-0.456±1.077 (0.672)<br />
-1.578
+0.145±1.298 (0.911)<br />
+1.156
 </td>
 <td style="text-align:left;">
-0.111±0.118 (0.348)<br />
-1.117
+0.079±0.131 (0.548)<br />
+1.082
 </td>
 </tr>
 <tr>
@@ -4211,16 +4352,169 @@ vte_history
 hospitalizedTRUE
 </td>
 <td style="text-align:left;">
--0.213±0.117 (0.069)<br />
-0.808
+-0.169±0.121 (0.161)<br />
+0.845
 </td>
 <td style="text-align:left;">
-0.212±0.997 (0.831)<br />
-1.236
+0.48±1.142 (0.674)<br />
+1.616
 </td>
 <td style="text-align:left;">
--0.084±0.093 (0.37)<br />
-0.919
+-0.059±0.105 (0.569)<br />
+0.943
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Brain.CNS
+</td>
+<td style="text-align:left;">
+-1.036±0.293 (&lt;0.001)<br />
+0.355
+</td>
+<td style="text-align:left;">
+-0.057±7.837 (0.994)<br />
+0.945
+</td>
+<td style="text-align:left;">
+-0.761±0.233 (0.001)<br />
+0.467
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Breast
+</td>
+<td style="text-align:left;">
+0.306±0.164 (0.062)<br />
+1.358
+</td>
+<td style="text-align:left;">
+3.586±1.816 (0.048)<br />
+36.089
+</td>
+<td style="text-align:left;">
+0.5±0.143 (&lt;0.001)<br />
+1.649
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gastrointestinal
+</td>
+<td style="text-align:left;">
+-0.412±0.137 (0.003)<br />
+0.662
+</td>
+<td style="text-align:left;">
+2.057±1.281 (0.108)<br />
+7.822
+</td>
+<td style="text-align:left;">
+-0.264±0.114 (0.021)<br />
+0.768
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Genitourinary
+</td>
+<td style="text-align:left;">
+0.199±0.179 (0.266)<br />
+1.22
+</td>
+<td style="text-align:left;">
+0.158±3.955 (0.968)<br />
+1.171
+</td>
+<td style="text-align:left;">
+0.661±0.157 (&lt;0.0001)<br />
+1.937
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gynecololgic
+</td>
+<td style="text-align:left;">
+-0.537±0.252 (0.033)<br />
+0.584
+</td>
+<td style="text-align:left;">
+-1.257±8.973 (0.889)<br />
+0.285
+</td>
+<td style="text-align:left;">
+-0.518±0.204 (0.011)<br />
+0.596
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Hematologic
+</td>
+<td style="text-align:left;">
+-0.048±0.158 (0.761)<br />
+0.953
+</td>
+<td style="text-align:left;">
+-1.327±4.412 (0.764)<br />
+0.265
+</td>
+<td style="text-align:left;">
+-0.017±0.139 (0.9)<br />
+0.983
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Lung
+</td>
+<td style="text-align:left;">
+-0.431±0.174 (0.013)<br />
+0.65
+</td>
+<td style="text-align:left;">
+4.238±1.737 (0.015)<br />
+69.269
+</td>
+<td style="text-align:left;">
+-0.327±0.146 (0.025)<br />
+0.721
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Other
+</td>
+<td style="text-align:left;">
+-0.319±0.1 (0.001)<br />
+0.727
+</td>
+<td style="text-align:left;">
+0.716±0.675 (0.289)<br />
+2.046
+</td>
+<td style="text-align:left;">
+-0.336±0.083 (&lt;0.0001)<br />
+0.715
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+charlson_comorb_score
+</td>
+<td style="text-align:left;">
+0.06±0.024 (0.013)<br />
+1.062
+</td>
+<td style="text-align:left;">
+0.084±0.263 (0.75)<br />
+1.088
+</td>
+<td style="text-align:left;">
+0.099±0.022 (&lt;0.0001)<br />
+1.104
 </td>
 </tr>
 <tr>
@@ -4228,16 +4522,16 @@ hospitalizedTRUE
 divisionEAST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.543±0.254 (0.032)<br />
-1.721
+0.616±0.257 (0.017)<br />
+1.852
 </td>
 <td style="text-align:left;">
-3.63±3.011 (0.228)<br />
-37.713
+5.706±6.086 (0.348)<br />
+300.666
 </td>
 <td style="text-align:left;">
-0.543±0.218 (0.013)<br />
-1.721
+0.573±0.234 (0.014)<br />
+1.774
 </td>
 </tr>
 <tr>
@@ -4245,16 +4539,16 @@ divisionEAST SOUTH CENTRAL
 divisionMIDDLE ATLANTIC
 </td>
 <td style="text-align:left;">
--0.357±0.184 (0.052)<br />
-0.7
+-0.189±0.185 (0.308)<br />
+0.828
 </td>
 <td style="text-align:left;">
--0.531±5.936 (0.929)<br />
-0.588
+-0.691±10.716 (0.949)<br />
+0.501
 </td>
 <td style="text-align:left;">
--0.81±0.15 (&lt;0.0001)<br />
-0.445
+-0.805±0.162 (&lt;0.0001)<br />
+0.447
 </td>
 </tr>
 <tr>
@@ -4262,16 +4556,16 @@ divisionMIDDLE ATLANTIC
 divisionMOUNTAIN
 </td>
 <td style="text-align:left;">
-0.303±0.184 (0.099)<br />
-1.354
+0.198±0.185 (0.286)<br />
+1.219
 </td>
 <td style="text-align:left;">
--0.085±4.571 (0.985)<br />
-0.919
+-0.088±10.074 (0.993)<br />
+0.916
 </td>
 <td style="text-align:left;">
-0.52±0.152 (&lt;0.001)<br />
-1.682
+0.688±0.164 (&lt;0.0001)<br />
+1.99
 </td>
 </tr>
 <tr>
@@ -4279,16 +4573,16 @@ divisionMOUNTAIN
 divisionNEW ENGLAND
 </td>
 <td style="text-align:left;">
--1.625±0.256 (&lt;0.0001)<br />
-0.197
+-1.207±0.255 (&lt;0.0001)<br />
+0.299
 </td>
 <td style="text-align:left;">
-3.129±2.992 (0.296)<br />
-22.851
+4.126±6.113 (0.5)<br />
+61.93
 </td>
 <td style="text-align:left;">
--0.842±0.164 (&lt;0.0001)<br />
-0.431
+-0.686±0.183 (&lt;0.001)<br />
+0.504
 </td>
 </tr>
 <tr>
@@ -4296,16 +4590,16 @@ divisionNEW ENGLAND
 divisionPACIFIC
 </td>
 <td style="text-align:left;">
-0.119±0.182 (0.514)<br />
-1.126
+0.105±0.181 (0.563)<br />
+1.111
 </td>
 <td style="text-align:left;">
--0.791±5.126 (0.877)<br />
-0.453
+-0.501±10.677 (0.963)<br />
+0.606
 </td>
 <td style="text-align:left;">
-0.028±0.148 (0.85)<br />
-1.028
+0.285±0.16 (0.075)<br />
+1.33
 </td>
 </tr>
 <tr>
@@ -4313,16 +4607,16 @@ divisionPACIFIC
 divisionSOUTH ATLANTIC
 </td>
 <td style="text-align:left;">
-0.151±0.132 (0.255)<br />
-1.163
+0.194±0.131 (0.14)<br />
+1.214
 </td>
 <td style="text-align:left;">
-3.211±2.861 (0.262)<br />
-24.804
+4.224±6.019 (0.483)<br />
+68.306
 </td>
 <td style="text-align:left;">
--0.064±0.109 (0.557)<br />
-0.938
+0.052±0.116 (0.657)<br />
+1.053
 </td>
 </tr>
 <tr>
@@ -4330,16 +4624,16 @@ divisionSOUTH ATLANTIC
 divisionUNKNOWN
 </td>
 <td style="text-align:left;">
--0.892±1.28 (0.486)<br />
-0.41
+-1.065±1.289 (0.409)<br />
+0.345
 </td>
 <td style="text-align:left;">
-0.843±14.711 (0.954)<br />
-2.323
+2.618±11.99 (0.827)<br />
+13.708
 </td>
 <td style="text-align:left;">
-0.761±0.76 (0.317)<br />
-2.14
+1.079±0.835 (0.197)<br />
+2.942
 </td>
 </tr>
 <tr>
@@ -4347,16 +4641,16 @@ divisionUNKNOWN
 divisionWEST NORTH CENTRAL
 </td>
 <td style="text-align:left;">
--0.031±0.173 (0.859)<br />
+0.089±0.176 (0.614)<br />
+1.093
+</td>
+<td style="text-align:left;">
+-0.085±9.849 (0.993)<br />
+0.919
+</td>
+<td style="text-align:left;">
+-0.031±0.151 (0.839)<br />
 0.969
-</td>
-<td style="text-align:left;">
--0.263±4.755 (0.956)<br />
-0.769
-</td>
-<td style="text-align:left;">
-0.03±0.139 (0.828)<br />
-1.03
 </td>
 </tr>
 <tr>
@@ -4364,16 +4658,16 @@ divisionWEST NORTH CENTRAL
 divisionWEST SOUTH CENTRAL
 </td>
 <td style="text-align:left;">
-0.191±0.159 (0.229)<br />
-1.21
+-0.038±0.161 (0.815)<br />
+0.963
 </td>
 <td style="text-align:left;">
-2.581±3 (0.39)<br />
-13.21
+4.019±6.086 (0.509)<br />
+55.645
 </td>
 <td style="text-align:left;">
-0.016±0.128 (0.899)<br />
-1.016
+0.136±0.142 (0.337)<br />
+1.146
 </td>
 </tr>
 <tr>
@@ -4381,16 +4675,16 @@ divisionWEST SOUTH CENTRAL
 education2AB
 </td>
 <td style="text-align:left;">
--0.029±0.107 (0.782)<br />
-0.971
+-0.089±0.108 (0.412)<br />
+0.915
 </td>
 <td style="text-align:left;">
--1.129±1.037 (0.276)<br />
-0.323
+-1.16±1.194 (0.331)<br />
+0.313
 </td>
 <td style="text-align:left;">
-0.094±0.087 (0.277)<br />
-1.099
+-0.071±0.094 (0.452)<br />
+0.931
 </td>
 </tr>
 <tr>
@@ -4398,16 +4692,16 @@ education2AB
 education2D
 </td>
 <td style="text-align:left;">
--0.139±0.122 (0.257)<br />
-0.87
+-0.191±0.124 (0.124)<br />
+0.826
 </td>
 <td style="text-align:left;">
-0.449±0.998 (0.653)<br />
-1.567
+1.051±1.073 (0.327)<br />
+2.861
 </td>
 <td style="text-align:left;">
--0.183±0.099 (0.066)<br />
-0.833
+-0.084±0.111 (0.45)<br />
+0.919
 </td>
 </tr>
 <tr>
@@ -4415,16 +4709,16 @@ education2D
 education2U
 </td>
 <td style="text-align:left;">
--0.095±0.369 (0.797)<br />
-0.909
+0.516±0.336 (0.125)<br />
+1.675
 </td>
 <td style="text-align:left;">
-0.42±7.211 (0.954)<br />
-1.522
+0.366±18.578 (0.984)<br />
+1.442
 </td>
 <td style="text-align:left;">
--0.009±0.305 (0.977)<br />
-0.991
+0.679±0.311 (0.029)<br />
+1.972
 </td>
 </tr>
 <tr>
@@ -4432,16 +4726,16 @@ education2U
 income_range0
 </td>
 <td style="text-align:left;">
--0.105±0.17 (0.535)<br />
-0.9
+0.011±0.17 (0.95)<br />
+1.011
 </td>
 <td style="text-align:left;">
--1.391±2.649 (0.6)<br />
-0.249
+-3.797±4.441 (0.393)<br />
+0.022
 </td>
 <td style="text-align:left;">
-0.321±0.135 (0.018)<br />
-1.379
+0.46±0.149 (0.002)<br />
+1.584
 </td>
 </tr>
 <tr>
@@ -4449,16 +4743,16 @@ income_range0
 income_range1
 </td>
 <td style="text-align:left;">
-0.072±0.143 (0.614)<br />
-1.075
+0.294±0.14 (0.036)<br />
+1.342
 </td>
 <td style="text-align:left;">
-1.141±1.118 (0.308)<br />
-3.13
+1.607±1.254 (0.2)<br />
+4.988
 </td>
 <td style="text-align:left;">
-0.608±0.116 (&lt;0.0001)<br />
-1.837
+0.816±0.123 (&lt;0.0001)<br />
+2.261
 </td>
 </tr>
 <tr>
@@ -4466,16 +4760,16 @@ income_range1
 income_range2
 </td>
 <td style="text-align:left;">
-0.361±0.186 (0.052)<br />
-1.435
+0.418±0.186 (0.025)<br />
+1.519
 </td>
 <td style="text-align:left;">
--1.003±2.878 (0.727)<br />
-0.367
+-1.735±5.138 (0.736)<br />
+0.176
 </td>
 <td style="text-align:left;">
-0.653±0.156 (&lt;0.0001)<br />
-1.921
+0.872±0.168 (&lt;0.0001)<br />
+2.392
 </td>
 </tr>
 <tr>
@@ -4483,16 +4777,16 @@ income_range2
 income_range3
 </td>
 <td style="text-align:left;">
-0.181±0.184 (0.325)<br />
-1.198
+0.266±0.184 (0.149)<br />
+1.305
 </td>
 <td style="text-align:left;">
-1.203±1.249 (0.335)<br />
-3.33
+1.239±1.345 (0.357)<br />
+3.452
 </td>
 <td style="text-align:left;">
-0.533±0.152 (&lt;0.001)<br />
-1.704
+0.635±0.164 (&lt;0.001)<br />
+1.887
 </td>
 </tr>
 <tr>
@@ -4500,16 +4794,16 @@ income_range3
 income_range4
 </td>
 <td style="text-align:left;">
--0.1±0.156 (0.521)<br />
-0.905
+-0.07±0.158 (0.656)<br />
+0.932
 </td>
 <td style="text-align:left;">
--1.666±3.213 (0.604)<br />
-0.189
+-3.24±6.217 (0.602)<br />
+0.039
 </td>
 <td style="text-align:left;">
-0.177±0.123 (0.152)<br />
-1.194
+0.359±0.137 (0.009)<br />
+1.432
 </td>
 </tr>
 <tr>
@@ -4517,84 +4811,843 @@ income_range4
 income_range5
 </td>
 <td style="text-align:left;">
-0.1±0.142 (0.479)<br />
-1.105
+0.183±0.144 (0.206)<br />
+1.201
 </td>
 <td style="text-align:left;">
-0.238±1.22 (0.845)<br />
-1.269
+1±1.291 (0.439)<br />
+2.718
 </td>
 <td style="text-align:left;">
-0.329±0.116 (0.004)<br />
-1.39
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceA
-</td>
-<td style="text-align:left;">
--0.142±0.293 (0.627)<br />
-0.868
-</td>
-<td style="text-align:left;">
-1.746±1.209 (0.149)<br />
-5.732
-</td>
-<td style="text-align:left;">
--0.465±0.24 (0.052)<br />
-0.628
+0.451±0.128 (&lt;0.001)<br />
+1.57
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceB
+ac4mo_copay_rng[10,30)
 </td>
 <td style="text-align:left;">
--0.485±0.135 (&lt;0.001)<br />
-0.616
+-0.564±0.133 (&lt;0.0001)<br />
+0.569
 </td>
 <td style="text-align:left;">
--0.526±1.011 (0.603)<br />
-0.591
+-2.779±3.71 (0.454)<br />
+0.062
 </td>
 <td style="text-align:left;">
--0.43±0.107 (&lt;0.0001)<br />
-0.651
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-raceH
-</td>
-<td style="text-align:left;">
--0.326±0.182 (0.073)<br />
-0.722
-</td>
-<td style="text-align:left;">
--2.005±4.168 (0.631)<br />
-0.135
-</td>
-<td style="text-align:left;">
--0.365±0.143 (0.011)<br />
-0.694
+-0.227±0.093 (0.015)<br />
+0.797
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-raceU
+ac4mo_copay_rng[100,250)
 </td>
 <td style="text-align:left;">
-0.11±0.227 (0.627)<br />
-1.116
+0.58±0.183 (0.002)<br />
+1.786
 </td>
 <td style="text-align:left;">
--1.146±4.315 (0.791)<br />
-0.318
+-3.265±9.957 (0.743)<br />
+0.038
 </td>
 <td style="text-align:left;">
--0.07±0.188 (0.712)<br />
-0.932
+-4.072±0.281 (&lt;0.0001)<br />
+0.017
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[250,500)
+</td>
+<td style="text-align:left;">
+-0.055±0.318 (0.862)<br />
+0.946
+</td>
+<td style="text-align:left;">
+-4.579±25.735 (0.859)<br />
+0.01
+</td>
+<td style="text-align:left;">
+-5.309±0.764 (&lt;0.0001)<br />
+0.005
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[30,50)
+</td>
+<td style="text-align:left;">
+0.565±0.112 (&lt;0.0001)<br />
+1.759
+</td>
+<td style="text-align:left;">
+1.364±1.004 (0.174)<br />
+3.912
+</td>
+<td style="text-align:left;">
+-3.178±0.122 (&lt;0.0001)<br />
+0.042
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[50,100)
+</td>
+<td style="text-align:left;">
+0.181±0.144 (0.208)<br />
+1.198
+</td>
+<td style="text-align:left;">
+0.831±1.344 (0.536)<br />
+2.296
+</td>
+<td style="text-align:left;">
+-4.089±0.211 (&lt;0.0001)<br />
+0.017
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng= 500
+</td>
+<td style="text-align:left;">
+-13.98±0 (&lt;0.0001)<br />
+0
+</td>
+<td style="text-align:left;">
+-6.983±0.001 (&lt;0.0001)<br />
+0.001
+</td>
+<td style="text-align:left;">
+-17.647±0 (&lt;0.0001)<br />
+0
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="model-4-1" class="section level2">
+<h2>Model 4:</h2>
+<p><span class="math inline">\(\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =\)</span> vte_VTENames + vte_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income_range + ac4mo_copay_range + product, where <span class="math inline">\(j\)</span> can be “Warfarin”, “DOAC”, “Unknown/Multiple”.</p>
+<table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<caption>
+Model 4. Results of multinomial logistic regression model.<br />
+Output format: coefficient ? standard error (p-value from Wald test)<br />
+        exponentiated coefficient
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+DOAC
+</th>
+<th style="text-align:left;">
+Unknown/Multiple
+</th>
+<th style="text-align:left;">
+Warfarin
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+(Intercept)
+</td>
+<td style="text-align:left;">
+0.246±0.257 (0.338)<br />
+1.279
+</td>
+<td style="text-align:left;">
+-10.152±3.96 (0.01)<br />
+0
+</td>
+<td style="text-align:left;">
+2.585±0.218 (&lt;0.0001)<br />
+13.263
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Lower.extremity.DVT
+</td>
+<td style="text-align:left;">
+-0.006±0.117 (0.961)<br />
+0.994
+</td>
+<td style="text-align:left;">
+0.846±0.953 (0.375)<br />
+2.33
+</td>
+<td style="text-align:left;">
+0.116±0.1 (0.247)<br />
+1.123
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Other
+</td>
+<td style="text-align:left;">
+-0.341±0.141 (0.016)<br />
+0.711
+</td>
+<td style="text-align:left;">
+1.036±1.048 (0.323)<br />
+2.818
+</td>
+<td style="text-align:left;">
+0.119±0.116 (0.308)<br />
+1.126
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Pulmonary.embolism
+</td>
+<td style="text-align:left;">
+-0.084±0.124 (0.498)<br />
+0.919
+</td>
+<td style="text-align:left;">
+0.227±1.018 (0.824)<br />
+1.255
+</td>
+<td style="text-align:left;">
+-0.058±0.107 (0.589)<br />
+0.944
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_Upper.extremity.DVT
+</td>
+<td style="text-align:left;">
+-0.016±0.156 (0.916)<br />
+0.984
+</td>
+<td style="text-align:left;">
+0.163±1.358 (0.904)<br />
+1.177
+</td>
+<td style="text-align:left;">
+-0.029±0.134 (0.826)<br />
+0.971
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+VTE_ivc_rv_pv
+</td>
+<td style="text-align:left;">
+-1.007±0.306 (0.001)<br />
+0.365
+</td>
+<td style="text-align:left;">
+-1.2±6.01 (0.842)<br />
+0.301
+</td>
+<td style="text-align:left;">
+-0.542±0.22 (0.014)<br />
+0.582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+vte_history
+</td>
+<td style="text-align:left;">
+-0.252±0.158 (0.11)<br />
+0.777
+</td>
+<td style="text-align:left;">
+0.459±1.276 (0.719)<br />
+1.582
+</td>
+<td style="text-align:left;">
+0.098±0.133 (0.463)<br />
+1.103
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+hospitalizedTRUE
+</td>
+<td style="text-align:left;">
+-0.126±0.122 (0.3)<br />
+0.882
+</td>
+<td style="text-align:left;">
+0.401±1.141 (0.726)<br />
+1.493
+</td>
+<td style="text-align:left;">
+-0.027±0.106 (0.796)<br />
+0.973
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Brain.CNS
+</td>
+<td style="text-align:left;">
+-0.929±0.295 (0.002)<br />
+0.395
+</td>
+<td style="text-align:left;">
+0.218±5.437 (0.968)<br />
+1.244
+</td>
+<td style="text-align:left;">
+-0.605±0.235 (0.01)<br />
+0.546
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Breast
+</td>
+<td style="text-align:left;">
+0.343±0.165 (0.038)<br />
+1.409
+</td>
+<td style="text-align:left;">
+3.034±1.643 (0.065)<br />
+20.78
+</td>
+<td style="text-align:left;">
+0.532±0.145 (&lt;0.001)<br />
+1.702
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gastrointestinal
+</td>
+<td style="text-align:left;">
+-0.396±0.139 (0.004)<br />
+0.673
+</td>
+<td style="text-align:left;">
+1.726±1.217 (0.156)<br />
+5.618
+</td>
+<td style="text-align:left;">
+-0.232±0.115 (0.044)<br />
+0.793
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Genitourinary
+</td>
+<td style="text-align:left;">
+0.154±0.18 (0.393)<br />
+1.166
+</td>
+<td style="text-align:left;">
+0.818±2.529 (0.746)<br />
+2.266
+</td>
+<td style="text-align:left;">
+0.595±0.159 (&lt;0.001)<br />
+1.813
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Gynecololgic
+</td>
+<td style="text-align:left;">
+-0.529±0.255 (0.038)<br />
+0.589
+</td>
+<td style="text-align:left;">
+-1.021±6.734 (0.88)<br />
+0.36
+</td>
+<td style="text-align:left;">
+-0.494±0.207 (0.017)<br />
+0.61
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Hematologic
+</td>
+<td style="text-align:left;">
+-0.019±0.161 (0.904)<br />
+0.981
+</td>
+<td style="text-align:left;">
+-0.343±2.509 (0.891)<br />
+0.71
+</td>
+<td style="text-align:left;">
+0.021±0.141 (0.88)<br />
+1.021
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Lung
+</td>
+<td style="text-align:left;">
+-0.427±0.176 (0.015)<br />
+0.652
+</td>
+<td style="text-align:left;">
+3.666±1.547 (0.018)<br />
+39.095
+</td>
+<td style="text-align:left;">
+-0.329±0.148 (0.026)<br />
+0.72
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+malignancy_Other
+</td>
+<td style="text-align:left;">
+-0.292±0.101 (0.004)<br />
+0.747
+</td>
+<td style="text-align:left;">
+0.755±0.662 (0.254)<br />
+2.128
+</td>
+<td style="text-align:left;">
+-0.293±0.084 (&lt;0.001)<br />
+0.746
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+charlson_comorb_score
+</td>
+<td style="text-align:left;">
+0.036±0.024 (0.144)<br />
+1.037
+</td>
+<td style="text-align:left;">
+0.097±0.23 (0.674)<br />
+1.102
+</td>
+<td style="text-align:left;">
+0.06±0.022 (0.006)<br />
+1.062
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionEAST SOUTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.621±0.257 (0.016)<br />
+1.861
+</td>
+<td style="text-align:left;">
+3.934±3.371 (0.243)<br />
+51.111
+</td>
+<td style="text-align:left;">
+0.551±0.234 (0.019)<br />
+1.735
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionMIDDLE ATLANTIC
+</td>
+<td style="text-align:left;">
+-0.251±0.19 (0.187)<br />
+0.778
+</td>
+<td style="text-align:left;">
+-0.054±5.361 (0.992)<br />
+0.947
+</td>
+<td style="text-align:left;">
+-0.889±0.166 (&lt;0.0001)<br />
+0.411
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionMOUNTAIN
+</td>
+<td style="text-align:left;">
+0.315±0.189 (0.095)<br />
+1.37
+</td>
+<td style="text-align:left;">
+0.324±4.429 (0.942)<br />
+1.383
+</td>
+<td style="text-align:left;">
+0.649±0.167 (&lt;0.0001)<br />
+1.914
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionNEW ENGLAND
+</td>
+<td style="text-align:left;">
+-1.395±0.259 (&lt;0.0001)<br />
+0.248
+</td>
+<td style="text-align:left;">
+2.982±3.41 (0.382)<br />
+19.727
+</td>
+<td style="text-align:left;">
+-0.931±0.188 (&lt;0.0001)<br />
+0.394
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionPACIFIC
+</td>
+<td style="text-align:left;">
+0.228±0.187 (0.222)<br />
+1.256
+</td>
+<td style="text-align:left;">
+-1.063±5.995 (0.859)<br />
+0.345
+</td>
+<td style="text-align:left;">
+0.128±0.164 (0.435)<br />
+1.137
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionSOUTH ATLANTIC
+</td>
+<td style="text-align:left;">
+0.172±0.136 (0.204)<br />
+1.188
+</td>
+<td style="text-align:left;">
+3.017±3.231 (0.35)<br />
+20.43
+</td>
+<td style="text-align:left;">
+-0.048±0.12 (0.688)<br />
+0.953
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionUNKNOWN
+</td>
+<td style="text-align:left;">
+-0.769±1.265 (0.543)<br />
+0.463
+</td>
+<td style="text-align:left;">
+1.222±8.808 (0.89)<br />
+3.394
+</td>
+<td style="text-align:left;">
+0.805±0.856 (0.347)<br />
+2.237
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionWEST NORTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.103±0.178 (0.563)<br />
+1.108
+</td>
+<td style="text-align:left;">
+0.141±5.035 (0.978)<br />
+1.151
+</td>
+<td style="text-align:left;">
+-0.063±0.152 (0.677)<br />
+0.939
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+divisionWEST SOUTH CENTRAL
+</td>
+<td style="text-align:left;">
+0.163±0.163 (0.319)<br />
+1.177
+</td>
+<td style="text-align:left;">
+2.768±3.343 (0.408)<br />
+15.927
+</td>
+<td style="text-align:left;">
+0.234±0.144 (0.104)<br />
+1.264
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2AB
+</td>
+<td style="text-align:left;">
+-0.074±0.109 (0.497)<br />
+0.929
+</td>
+<td style="text-align:left;">
+-1.164±1.183 (0.325)<br />
+0.312
+</td>
+<td style="text-align:left;">
+-0.041±0.095 (0.665)<br />
+0.96
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2D
+</td>
+<td style="text-align:left;">
+-0.167±0.125 (0.182)<br />
+0.846
+</td>
+<td style="text-align:left;">
+0.684±1.025 (0.505)<br />
+1.982
+</td>
+<td style="text-align:left;">
+-0.066±0.113 (0.561)<br />
+0.936
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+education2U
+</td>
+<td style="text-align:left;">
+0.138±0.337 (0.682)<br />
+1.148
+</td>
+<td style="text-align:left;">
+-0.115±9.428 (0.99)<br />
+0.891
+</td>
+<td style="text-align:left;">
+0.265±0.31 (0.394)<br />
+1.303
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range0
+</td>
+<td style="text-align:left;">
+-0.118±0.173 (0.494)<br />
+0.889
+</td>
+<td style="text-align:left;">
+-2.432±3.167 (0.442)<br />
+0.088
+</td>
+<td style="text-align:left;">
+0.286±0.152 (0.059)<br />
+1.331
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range1
+</td>
+<td style="text-align:left;">
+0.014±0.147 (0.926)<br />
+1.014
+</td>
+<td style="text-align:left;">
+0.916±1.227 (0.455)<br />
+2.499
+</td>
+<td style="text-align:left;">
+0.441±0.128 (&lt;0.001)<br />
+1.554
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range2
+</td>
+<td style="text-align:left;">
+0.239±0.19 (0.209)<br />
+1.27
+</td>
+<td style="text-align:left;">
+-1.329±3.478 (0.702)<br />
+0.265
+</td>
+<td style="text-align:left;">
+0.61±0.171 (&lt;0.001)<br />
+1.84
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range3
+</td>
+<td style="text-align:left;">
+0.111±0.187 (0.551)<br />
+1.117
+</td>
+<td style="text-align:left;">
+1.147±1.306 (0.38)<br />
+3.149
+</td>
+<td style="text-align:left;">
+0.437±0.166 (0.008)<br />
+1.548
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range4
+</td>
+<td style="text-align:left;">
+-0.134±0.16 (0.401)<br />
+0.875
+</td>
+<td style="text-align:left;">
+-2.011±3.63 (0.58)<br />
+0.134
+</td>
+<td style="text-align:left;">
+0.249±0.14 (0.077)<br />
+1.283
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+income_range5
+</td>
+<td style="text-align:left;">
+0.124±0.146 (0.397)<br />
+1.132
+</td>
+<td style="text-align:left;">
+0.373±1.287 (0.772)<br />
+1.452
+</td>
+<td style="text-align:left;">
+0.349±0.13 (0.007)<br />
+1.418
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[10,30)
+</td>
+<td style="text-align:left;">
+-0.441±0.135 (0.001)<br />
+0.643
+</td>
+<td style="text-align:left;">
+-1.349±2.12 (0.525)<br />
+0.259
+</td>
+<td style="text-align:left;">
+-0.002±0.096 (0.986)<br />
+0.998
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[100,250)
+</td>
+<td style="text-align:left;">
+0.368±0.187 (0.048)<br />
+1.445
+</td>
+<td style="text-align:left;">
+-2.356±6.809 (0.729)<br />
+0.095
+</td>
+<td style="text-align:left;">
+-4.279±0.282 (&lt;0.0001)<br />
+0.014
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[250,500)
+</td>
+<td style="text-align:left;">
+-0.329±0.323 (0.308)<br />
+0.72
+</td>
+<td style="text-align:left;">
+-5.203±40.308 (0.897)<br />
+0.006
+</td>
+<td style="text-align:left;">
+-5.594±0.75 (&lt;0.0001)<br />
+0.004
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[30,50)
+</td>
+<td style="text-align:left;">
+0.577±0.115 (&lt;0.0001)<br />
+1.781
+</td>
+<td style="text-align:left;">
+1.344±1.008 (0.182)<br />
+3.834
+</td>
+<td style="text-align:left;">
+-3.092±0.124 (&lt;0.0001)<br />
+0.045
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng[50,100)
+</td>
+<td style="text-align:left;">
+0.153±0.147 (0.299)<br />
+1.165
+</td>
+<td style="text-align:left;">
+0.883±1.346 (0.512)<br />
+2.418
+</td>
+<td style="text-align:left;">
+-4.051±0.213 (&lt;0.0001)<br />
+0.017
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+ac4mo_copay_rng= 500
+</td>
+<td style="text-align:left;">
+-12.666±0 (&lt;0.0001)<br />
+0
+</td>
+<td style="text-align:left;">
+-6.383±0.002 (&lt;0.0001)<br />
+0.002
+</td>
+<td style="text-align:left;">
+-15.527±0 (&lt;0.0001)<br />
+0
 </td>
 </tr>
 <tr>
@@ -4602,16 +5655,16 @@ raceU
 productEPO
 </td>
 <td style="text-align:left;">
--0.235±0.199 (0.237)<br />
-0.791
+-0.284±0.208 (0.172)<br />
+0.753
 </td>
 <td style="text-align:left;">
--3.864±5.617 (0.491)<br />
-0.021
+-4.381±6.313 (0.488)<br />
+0.013
 </td>
 <td style="text-align:left;">
--0.746±0.154 (&lt;0.0001)<br />
-0.474
+-0.623±0.177 (&lt;0.001)<br />
+0.536
 </td>
 </tr>
 <tr>
@@ -4619,16 +5672,16 @@ productEPO
 productIND
 </td>
 <td style="text-align:left;">
-0.31±0.265 (0.243)<br />
-1.363
+0.494±0.272 (0.07)<br />
+1.639
 </td>
 <td style="text-align:left;">
--1.553±2.898 (0.592)<br />
-0.212
+-2.018±4.063 (0.619)<br />
+0.133
 </td>
 <td style="text-align:left;">
--0.122±0.222 (0.584)<br />
-0.885
+0.169±0.252 (0.502)<br />
+1.184
 </td>
 </tr>
 <tr>
@@ -4636,16 +5689,16 @@ productIND
 productOTH
 </td>
 <td style="text-align:left;">
-0.902±0.144 (&lt;0.0001)<br />
-2.465
+0.919±0.152 (&lt;0.0001)<br />
+2.507
 </td>
 <td style="text-align:left;">
--0.711±1.018 (0.485)<br />
-0.491
+-0.954±1.244 (0.443)<br />
+0.385
 </td>
 <td style="text-align:left;">
--0.15±0.121 (0.218)<br />
-0.861
+0.215±0.138 (0.118)<br />
+1.24
 </td>
 </tr>
 <tr>
@@ -4653,16 +5706,16 @@ productOTH
 productPOS
 </td>
 <td style="text-align:left;">
--0.213±0.124 (0.087)<br />
-0.808
+-0.177±0.132 (0.181)<br />
+0.838
 </td>
 <td style="text-align:left;">
--1.569±0.892 (0.078)<br />
-0.208
+-1.84±1.034 (0.075)<br />
+0.159
 </td>
 <td style="text-align:left;">
--0.927±0.097 (&lt;0.0001)<br />
-0.396
+-0.928±0.111 (&lt;0.0001)<br />
+0.395
 </td>
 </tr>
 <tr>
@@ -4670,16 +5723,16 @@ productPOS
 productPPO
 </td>
 <td style="text-align:left;">
-0.318±0.192 (0.098)<br />
-1.374
+0.187±0.2 (0.35)<br />
+1.206
 </td>
 <td style="text-align:left;">
--2.782±2.675 (0.298)<br />
-0.062
+-3.344±4.142 (0.419)<br />
+0.035
 </td>
 <td style="text-align:left;">
--0.127±0.155 (0.413)<br />
-0.881
+0.121±0.174 (0.485)<br />
+1.129
 </td>
 </tr>
 </tbody>
