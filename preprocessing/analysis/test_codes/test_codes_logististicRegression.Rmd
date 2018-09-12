@@ -1,0 +1,285 @@
+---
+title: "test_codes_logististicRegression"
+output: html_document
+---
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\Y}{\mathbf{Y}}
+\newcommand{\Ident}{\mathbf{I}}
+\newcommand{\HatMat}{\mathbf{H}}
+\renewcommand{\hat}[1]{\widehat{#1}}
+\newcommand{\Expect}[1]{\mathbb{E}\left[ #1 \right]}
+\newcommand{\Var}[1]{\mathrm{Var}\left[ #1 \right]}
+\newcommand{\Cov}[1]{\mathrm{Cov}\left[ #1 \right]}
+\newcommand{\Prob}[1]{\mathbb{P}\left( #1 \right)}
+\newcommand{\tr}{\textrm{trace}}
+\newcommand{\norm}[1]{\lVert #1 \rVert}\def\Inf{\o_peratornamewithlimits{inf\vphantom{p}}}
+
+\def\impliedby{\DOTSB\;\Longleftarrow\;}
+\newcommand\ind{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\newcommand{\nind}{\centernot{\ind}}
+
+  
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis')
+
+library(dplyr)
+library(tidyr)  
+library(data.table)
+library(knitr)
+library(kableExtra)
+library(survival)
+library(reshape2)
+library(lme4)
+library(xlsx)
+```
+
+
+```{r echo=FALSE, eval = FALSE}
+## 1. Conditional logit and usual logit
+N <- 1000
+gender <- rep(rbinom(N,1,0.5),each=2)
+b <- rep(rnorm(N,0,1),each=2)
+beta_gender <- 0.5
+gamma <- 2
+zeta  <- 1
+dat <- data.frame(matrix(NA,nrow=2*N,ncol=2))
+dat[,2] <- b
+dat[,3] <- gender
+expit <- function(x) 1/(1+exp(-x))
+for (i in 1:N){
+    dat[2*i-1,1] <- rbinom(1,1,expit(b[2*i-1]+beta_gender*gender[2*i-1])) 
+    dat[2*i,1]   <- rbinom(1,1,expit(b[2*i]+beta_gender*gender[2*i]+gamma+zeta*gender[2*i])) 
+}
+dat$ID <- rep(1:N,each=2)
+dat$visit <- rep(1:2,N)
+colnames(dat) <- c("Y","b","gender","ID","visit")
+
+# conditional logistic regression:
+library(survival)
+res <- survival::clogit(Y~visit+visit:gender+strata(ID),data=dat)
+res$coef
+
+library(lme4)
+lme4::glmer(Y~visit +gender +(1| ID),data=dat,family="binomial")
+
+# usual logistic regression
+res2 <- glm(Y~visit+gender,data=dat,family="binomial")
+res2$coef
+```
+
+
+
+
+## 1. Use 9 factor levels
+```{r}
+# simulation on more levels -----------------------------------------------
+N <- 1000
+
+# covariate 1: gender with 9 levels
+L <- 9
+gender <- rep(sample(1:L, N, replace=TRUE),each=2)
+beta_gender <- c(0, seq(-2,2,length.out = L-1))
+
+# covariate 2: var2 with 24 levels
+L2 <- 24
+var2 <- rep(sample(1:L2, N, replace = TRUE), each=2)
+beta_var2 <- c(0, seq(-3,3,length.out = L2-1))
+
+# add random intercept
+b <- rep(rnorm(N,0,1),each=2)
+
+# visit effect
+gamma <- 2
+
+# interaction between visit and gender
+zeta  <- c(0, seq(-1,1,length.out = L-1))
+
+dat <- data.frame(matrix(NA,nrow=2*N,ncol=2))
+dat[,2] <- b
+dat[,3] <- gender
+dat[,4] <- var2
+expit <- function(x) 1/(1+exp(-x))
+for (i in 1:N){
+  dat[2*i-1,1] <- rbinom(1,1,expit(b[2*i-1]+beta_gender[gender[2*i-1]]+beta_var2[var2[2*i-1]]))
+  dat[2*i,1]   <- rbinom(1,1,expit(b[2*i]+beta_gender[gender[2*i]]+beta_var2[var2[2*i-1]]+gamma+zeta[gender[2*i]]))
+}
+dat$ID <- rep(1:N,each=2)
+dat$visit <- rep(1:2,N)
+colnames(dat) <- c("Y","b","gender","var2","ID","visit")
+dat$gender <- as.factor(dat$gender)
+dat$var2 <- as.factor(dat$var2)
+dat$visit <- as.factor(dat$visit)
+dat$ID <- factor(dat$ID)
+
+
+#True parameter values:
+beta_gender
+beta_var2
+zeta
+```
+
+
+### 2.1 Usual GLMM logistic
+```{r echo=FALSE}
+library(lme4)
+# default optimizer. It fails to converge.
+model1 <- glmer(Y~var2+visit*gender +(1| ID),data=dat,family="binomial",
+                control=glmerControl(optCtrl=list(maxfun=100000)))
+model1 
+```
+
+```{r}
+# no convergence issue using BOBYQA
+model2 <- glmer(Y~var2+visit*gender +(1| ID),data=dat,family="binomial",
+            control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=100000)))
+model2
+```
+
+Check cell counts:
+```{r}
+myind <- 1:N#which(levels(dat$gender)[as.numeric(dat$gender)]=="9")
+table(dat$gender[myind],dat$var2[myind],dat$Y[myind])
+```
+
+
+
+
+
+### 2.2 Use GLMM Lasso
+(Reference: https://arxiv.org/pdf/1109.4003.pdf)
+Definition:
+Model: $$ g(\mu) = \eta = X \beta + Z b,$$
+where $b \sim \mathcal{N}_q (0, \Sigma_\theta)$ with the covariance matrix $\Sigma_\theta$ being parametrized by an unknown parameter $\theta$. We write $\Sigma_\theta = \Lambda_\theta \Lambda_\theta^\top$ using its Cholesky decomposition. Then we may write $\eta = X \beta + (Z \Lambda) U$, where $U \sim \mathcal{N}_q (0, I_q)$. Assuming the response belongs to the exponential family, let $\phi$ be the dispersion parameter, and let $\xi_i = \xi_i (\mu_i) = \xi_i(\beta, \theta)$. The likelihood function is 
+$$ 
+\begin{aligned}
+L(\beta, \theta, \phi) &= P(y | \beta, \theta) \\
+&= \int P(y | \beta, \theta, u) P(u) du \\
+&=\int \prod\limits_{i=1}^N P(y_i | \beta, \theta, u) du \\
+&= \int_{\mathbb{R}^q} \prod\limits_{i=1}^n \left[ \mathrm{exp} \left\{\frac{y_i \xi_i - b(\xi_i)}{\phi} + c(\xi_i) \right\} \right] (2\pi)^{- \frac{q}{2}} \mathrm{exp} \left\{ -\frac{1}{2} u^\top u \right\} du \\
+&= (2\pi)^{- \frac{q}{2}} \int_{\mathbb{R}^q} \mathrm{exp} \left\{ \sum\limits_{i=1}^n \left[ \frac{y_i \xi_i - b(\xi_i)}{\phi} + c(\xi_i) \right] -\frac{1}{2} u^\top u \right\}du.
+\end{aligned}
+$$
+The GLMM Lasso estimator is given by 
+$$ (\hat{\beta}, \hat{\theta}, \hat{\phi}) = \argmin -2 L(\beta, \theta,\phi) + \lambda \norm{\beta}_1, \lambda \geq 0.$$
+
+
+```{r}
+# no convergence issue using BOBYQA
+model3 <- glmer(Y~visit+gender+var2+(1| ID),data=dat,family="binomial",
+            control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=100000)))
+model3
+```
+
+
+```{r}
+library(glmmLasso)
+
+# compare model3 with lambda = 0
+model.la <- glmmLasso(Y~as.factor(visit)+as.factor(gender)+as.factor(var2), rnd = list(ID=~1),
+                      lambda=0, data=dat,
+                      family = binomial(link = "logit")) #control=list(print.iter=TRUE)
+# add interactions
+gen <- data.frame(model.matrix(~gender+0, data=dat))
+dat2 <- cbind(dat, gen[,-1])
+dat2[,(ncol(dat2)+1):(ncol(dat2)+L-1)] <- lapply(
+  dat2[,(ncol(dat2)-L+2):(ncol(dat2))],
+  function(x) (as.numeric(dat2$visit)=="2") * x)
+
+vars1 <- colnames(dat2)[-which(colnames(dat2) %in% c("Y", "b", "ID", "gender"))]
+fm1.la <- as.formula(paste("Y~", paste(vars1, collapse="+")))
+
+
+myglmm <- function(l){
+  glmmLasso(fm1.la, rnd = list(ID=~1), 
+                        lambda=l, data=dat2,
+                        family = binomial(link = "logit"), control=list(print.iter=TRUE))
+}
+lapply(c(0,10,20), myglmm)
+```
+
+The $\beta$ estimates are shrunken towards 0. Even when $\lambda = 0$, $\hat{\beta}$ is off the true value. The $\zeta$ estimates for the interactions are far off the true value, and mostly are biased away from the true values.
+
+glmmLASSO with $\lambda = 0$ should give the same estimates as glmer. BUT it does not.
+
+
+
+
+
+
+
+## 3. Troubleshooting convergence: Assessing Convergence for Fitted Models
+Reference: https://rpubs.com/bbolker/lme4trouble1
+
+### 3.1 Check singularity
+```{r}
+# theta = random-effects parameter estimates: these are parameterized as the relative Cholesky factors of each random effect term
+tt <- getME(model1,"theta") 
+
+# lower = lower bounds on model parameters (random effects parameters only)
+ll <- getME(model1,"lower")
+
+min(tt[ll==0]) # not too small, should not be an issue.
+```
+
+
+
+### 3.2 Double-checking gradient calculations
+
+```{r}
+library(numDeriv)
+
+# recompute gradient and Hessian with Richardson extrapolation from numDeriv package
+devfun <- update(model1, devFunOnly=TRUE)
+pars <- getME(model1,c("theta","fixef"))
+
+print(hess <- hessian(devfun, unlist(pars))) #hess
+print(grad <- grad(devfun, unlist(pars))) #gradient
+print(scgrad <- solve(chol(hess), grad)) #scaled gradient
+
+max(pmin(abs(scgrad),abs(grad))) # 0.06856662
+eigen(hess)$values
+
+
+# internal calculations in glmer:
+derivs1 <- model1@optinfo$derivs
+sc_grad1 <- with(derivs1,solve(Hessian,gradient))
+cat("max scaled gradient: "); print(max(abs(sc_grad1))) # 0.0802433
+cat("max of parallel min among scaled gradient and gradiant: ");
+max(pmin(abs(sc_grad1), abs(derivs1$gradient))) # 0.06619684
+```
+
+
+### 3.3 Restart
+
+```{r}
+## restart the fit from the original value (or a slightly perturbed value):
+model1.restart <- update(model1, start=pars) # still fails to converge unfortunately
+```
+
+
+### 3.4 try all available optimizers
+
+```{r}
+source(system.file("utils", "allFit.R", package="lme4"))
+model1.all <- allFit(model1)
+ss <- summary(model1.all)
+ss$ fixef               ## extract fixed effects
+ss$ llik                ## log-likelihoods
+ss$ sdcor               ## SDs and correlations
+ss$ theta               ## Cholesky factors
+ss$ which.OK            ## which fits worked
+```
+
+In  the lme4 paper (https://arxiv.org/pdf/1406.5823.pdf), the author pointed out that convergence problems they have observed to date arise from penalized least squares failures. This occurs when one step "$X^\top W X - R_{ZX}^\top R_{ZX}$ becomes singular during an evaluation of the objective function, with badly scaled problems (i.e., problems with continuous predictors that take a very large or very small numerical range of values)."
+

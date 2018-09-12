@@ -1,0 +1,363 @@
+---
+title: "Multinomial logistic regression on AC3Mo"
+output:
+  html_document: default
+  html_notebook: deafult
+---
+
+# Summary:
+
+People with "Other" and "Not captured" at AC3Mo are removed. Final sample size = 12652.
+
+
+## About the covariates
+
+The following describes the process of selecting variables into the regression model, and gives reasons to why certain variables are not included in the model.
+
+- In all SES variables including race, education, federal poverty level, home ownership, occupation, income, networth, and division, all NA values are coded as the same as the missing level ("0" or "U").
+
+- Federal poverty level only has 3 levels "Above 400% FPL", "Below 400% FPL", and "Unkown", and very few people ($\leq$3) have "Below 400% FPL". Thus fed\_poverty is not used.
+
+- Home ownership only has "probable homeowner" and "unknown". This does not provide useful information so is not used.
+
+- Occupation has >75\% "unknown" and is thus not used.
+
+
+
+Categories of some variables are combined, due to small cell counts which causes difficulty in fitting the model and yielding good parameter estimates.
+
+Here is description of variables used in the model:
+
+- index\_vte\_type: categorical variable. It has levels "VTE_Lower.extremity.DVT", "VTE_Other", "VTE_Pulmonary.embolism", "VTE_Upper.extremity.DVT", and "VTE_ivc_rv_pv".
+
+- charlson_comorb_score: Charlson comorbidity score.
+
+- Age\_s: continuous variable, defined as (age - mean of age) / standard deviation of age. 
+
+- Race: categorical variable. It has levels "A", "B", "H", "W", and "U", where "W" (white) is the reference level.
+
+- Male: = 1 if a patient is male, and 0 if female.
+
+- Education2: categorical variable. Since level "Less than 12th Grade" ("A") has too few counts, it is combined with level "High School Diploma" ("B") into in to a single level, coded as "AB". The variable has levels "AB", "C", "D", and "U", where "C" is the reference level.
+
+- VTE\_history: = 1 if a patient has VTE history, and 0 if not.
+
+- Hospitalized: = 1 if a patient was hospitalized, and 0 if not.
+
+- Division: categorical variable. "EAST NORTH CENTRAL" is the reference level.
+
+- Income\_range: categorical variable. "6" is the reference level.
+
+- Product: categorical variable. "HMO" is the referene level.
+
+- Malignancies: 30 binary variables. Each column has values 0 and 1. Each malignancy name is coded as "malignancy.cancer". For example, "malignancy.stomach" means stomach cancers. "malignancy.stomach" = 1 if the patient has stomach cancers on index cancer date.  
+
+**Model: Multinomial logistic regression**
+
+$\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ index\_vte\_type + charlson_comorb_score + age\_s + race + male + education2 + vte_history + hospitalized + division + income_range + product, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple", or "Not captured".
+
+i.e. LMWH is the reference level for AC3Mo.
+
+*Note*
+1. What do you think about the regression result?
+
+2. Are the variables in the model appropriate? 
+
+3. What are other variables you would like to include in the model?
+
+
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis/a1_proportions')
+
+library(dplyr)
+library(tidyr)  
+library(data.table)
+library(knitr)
+library(kableExtra)
+library(reshape2)
+library(xlsx)
+library(readxl)
+library(mlogit)
+library(nnet)
+```
+
+
+```{r echo=FALSE}
+dat <- data.table(readRDS("../../data/prog100_analysis_data.rds"))
+
+vars_not_wanted <- c("clmid", "fill_dt", "category", "brand_name", "gen_name", "copay", "copay_sum", "days_sup", "quantity", "strength", "npi")
+dat1 <- unique(dat[,(vars_not_wanted) := NULL])
+
+# UNKNOWN VALUE IN THESE VARIABLES ARE CODED AS "U"
+ses1 <- c("education", "fed_poverty",  "occupation")
+dat2 <- dat1[, (ses1) := lapply(.SD, function(x) ifelse(is.na(x), "U", x)), .SDcols=ses1]
+
+# UNKNOWN VALUE IN THESE VARIABLES ARE CODED AS "0"
+ses2 <- c("home_ownership", "networth_range", "income_range")
+dat2[, (ses2) := lapply(.SD, function(x) ifelse(is.na(x), "0", x)), .SDcols=ses2]
+
+dat2 <- dat2[, c("index_ac_lmwh","ac3mo_lmwh", "index_ac_warfarin","ac3mo_warfarin") := .(index_ac=="LMWH", outcome=="LMWH", index_ac=="Warfarin", outcome=="Warfarin")]
+
+
+# combine all doacs categories into doac
+dat2$outcome2 <- with(dat2, ifelse(outcome %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", outcome))
+dat2[, outcome2 := as.factor(outcome2)]
+dat2 <- within(dat2, outcome2 <- relevel(outcome2, ref = "LMWH"))
+
+dat2[, outcome := as.factor(outcome)]
+dat2 <- within(dat2, outcome <- relevel(outcome, ref = "Warfarin"))
+
+# unwrap combined index VTE types into columns of binary indicators
+vte_info <- read_excel("../../data/prog8_vte.xlsx", sheet = "raw_VTE_POS")
+vte_info2 <- unique(data.table(vte_info)[!is.na(VTE_type),.(patid, VTE_type)])
+vte <- model.matrix(patid~VTE_type+0, data=vte_info2)
+colnames(vte) <- gsub("type", "", colnames(vte))
+vte2 <- data.frame(cbind(vte_info2[,1], vte))
+vte3 <- aggregate(. ~ patid, vte2, sum)
+dat2 <- merge(x=dat2, y=vte3, by="patid", all.x = TRUE)
+rm(vte_info, vte_info2, vte, vte2, vte3)
+
+# combine the 3 rarest VTE types
+dat2[,VTE_ivc_rv_pv:= as.numeric((VTE_IVC | VTE_Portal.vein | VTE_Renal.vein))]
+
+comorb_names <- colnames(dat2)[grep("comorbidity", colnames(dat2))]
+dat2[, (comorb_names) := lapply(.SD, function(x) ifelse(is.na(x), 0, x)), .SDcols = comorb_names]
+dat2[,comorb01 := !is.na(comorbidities)]
+# count the number of comorbidities
+dat2[, ("n_comorb") := rowSums(.SD), .SDcols=comorb_names]
+# summary(dat2$n_comorb)
+
+dat2[, race := ifelse(race=="", "U", race)]
+
+antip_names <- colnames(dat2)[grep("antiplatelet", colnames(dat2))]
+dat2[, (antip_names) := lapply(.SD, function(x) ifelse(is.na(x), 0, x)), .SDcols = antip_names]
+dat2[, ("antiplatelet") := (rowSums(.SD) > 0), .SDcols=antip_names]
+
+dat2[,c("race", "division", "product", "education", "fed_poverty","income_range", "networth_range", "occupation")] <- lapply(dat2[,c("race", "division", "product", "education", "fed_poverty","income_range", "networth_range", "occupation")], as.factor)
+
+# pdf("a1_hist_n_comorbidities.pdf")
+# hist(dat2$n_comorb, main="Histogram of number of comorbidities",
+     # xlab="Number of comorbidities")
+# dev.off()
+
+# scaled age
+dat2$age_s <- scale(dat2$age)
+# center age by mean
+dat2$age_c <- dat2$age - mean(dat2$age)
+
+# combine the smallest education level to the next level
+dat2[,education2 := as.factor(ifelse(as.character(education) %in% c("B", "A"), "AB", as.character(education)))]
+
+# use the largest level as the reference level
+dat2 <- within(dat2, education <- relevel(education, ref = "C"))
+dat2 <- within(dat2, education2 <- relevel(education2, ref = "C"))
+dat2 <- within(dat2, race <- relevel(race, ref = "W"))
+dat2 <- within(dat2, income_range <- relevel(income_range, ref = "6"))
+dat2 <- within(dat2, product <- relevel(product, ref = "HMO"))
+
+# combine asian and hispanic for race
+dat2[,race2 := as.factor(ifelse(as.character(race) %in% c("H", "A"), "AsianHispanic", as.character(race)))]
+
+# combine regions for division
+dat2 <- data.table(dat2 %>%
+  mutate(division2 = case_when(
+    division %in% c("WEST SOUTH CENTRAL", "WEST NORTH CENTRAL") ~ "WEST CENTRAL",
+    division %in% c("EAST SOUTH CENTRAL", "EAST NORTH CENTRAL") ~ "EAST CENTRAL",
+    division %in% c("SOUTH ATLANTIC", "MIDDLE ATLANTIC", "NEW ENGLAND") ~ "ATLANTIC_ENGLAND",
+    division %in% c("MOUNTAIN", "PACIFIC") ~ "MOUNTAIN_PACIFIC",
+    TRUE ~ "UNKNOWN"
+  )))
+
+# combine insurace type
+dat2[,product2 := as.factor(ifelse(as.character(product) %in% c("EPO", "IND", "PPO"), "EPO_IND_PPO", as.character(product)))]
+dat2 <- within(dat2, product2 <- relevel(product2, ref = "HMO"))
+
+# obtain variable names for index VTE types
+# all distinct VTE categories
+vte_names0 <- colnames(dat2)[grep("VTE_", colnames(dat2))]
+vte_names1 <- vte_names0[-which(vte_names0 %in% c("VTE_IVC","VTE_Portal.vein", "VTE_Renal.vein"))]
+
+# split index cancers into binary columns
+# cancers <- dat2 %>%
+#   mutate(cancer_type = strsplit(as.character(cancer_type), ", ")) %>% 
+#   unnest(cancer_type) %>%
+#   select(patid, cancer_type) %>% 
+#   distinct() %>%
+#   arrange(patid)
+
+# convert each cancer into a binary indicator
+# cancers2 <- as.data.frame(cancers$cancer_type)
+# cancers_binary <- data.frame(model.matrix(~ . + 0, data=cancers2,
+#              contrasts.arg = lapply(cancers2, contrasts, contrasts=FALSE)))
+# colnames(cancers_binary) <- tolower(gsub("X.cancers.cancer_type.", "malignancy.", colnames(cancers_binary)))
+# colnames(cancers_binary) <- gsub("\\.\\.\\.", "\\.", colnames(cancers_binary))
+# cancers_binary_withID <- cbind(data.frame(cancers$patid), cancers_binary)
+# colnames(cancers_binary_withID)[1] <- "patid"
+# cancers3 <- aggregate(. ~ patid, cancers_binary_withID, sum)
+# dat2 <- merge(x=dat2, y=cancers3, by="patid")
+# 
+# # Add combined malignancies
+# malignancy_names <- colnames(dat2)[grep("malignancy", colnames(dat2))]
+
+# Add combined malignancies
+malignancy_names <- colnames(dat2)[grep("malignancy_", colnames(dat2))]
+
+
+# remove people who have Other AC
+dat2 <- dat2[!outcome %in% c("Other", "Not captured"),]
+dat2$outcome2 <- factor(dat2$outcome2)
+
+round_pvalues <- function(x){
+  if (x < 0.0001) return("<0.0001") else if (0.0001 <= x & x < 0.001)
+    return("<0.001") else if (0.001 <= x) return(round(x, 3))
+}
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+## Model 1: 
+# Y: Separated DOAC categories
+# Index VTE type: not combined
+# Comorbidities: Number of comorbidities
+
+fm1 <- as.formula(paste("outcome~", paste(c(vte_names1), collapse="+"), "+ n_comorb + age_s + race + male + education + vte_history + hospitalized + smoke + division + income_range + product + antiplatelet"))
+fit1 <- multinom(fm1, data=dat2)
+s1 <- summary(fit1)
+print("Coefficients: "); s1$coefficients
+print("Standard errors: "); s1$standard.errors
+print("Deviance: "); s1$deviance
+print("AIC: "); s1$AIC
+# s1$fitted.values
+```
+
+
+
+
+
+```{r echo=FALSE, eval=FALSE}
+## Model 2: 
+# Y: DOACs are combined
+# Index VTE type: combined, ivc_rv_pv as reference level
+# Comorbidities: number of comorbidities
+# education: combined
+# division: combined
+# 33 covariates
+fm2 <- as.formula(paste("outcome2~", paste(c(vte_names1), collapse="+"), "+ n_comorb + age_s + race + male + education + vte_history + hospitalized + smoke + division + income_range + product + antiplatelet"))
+fit2 <- multinom(fm2, data=dat2)
+s2 <- summary(fit2)
+print("Coefficients: "); s2$coefficients
+print("Standard errors: "); s2$standard.errors
+print("Deviance: "); s2$deviance
+print("AIC: "); s2$AIC
+# s2$fitted.values
+# exp(s2$coefficients)
+```
+
+```{r echo=FALSE, eval=FALSE}
+# **Coefficients from the model. 33 covariates. **
+
+## Model 3: 
+# Y: DOACs are combined
+# Index VTE type: combined, ivc_rv_pv as reference level
+# Comorbidities: individual comorbidities
+# education: combined
+# division: combined
+# 33 covariates
+fm3 <- as.formula(paste("outcome2~", paste(c(vte_names_noref), collapse="+"), "+ n_comorb + age_s + race + male + education2 + vte_history + hospitalized + smoke + division + income_range + product + antiplatelet"))
+fit3 <- multinom(fm3, data=dat2, trace=FALSE)
+s3 <- summary(fit3)
+
+t3_coef <- round(data.matrix(s3$coefficients), 3)
+t3_se <- round(data.matrix(s3$standard.errors), 3)
+
+z <- s3$coefficients/s3$standard.errors
+# 2-tailed Wald z tests to test significance of coefficients
+p <- data.matrix(sapply((1-pnorm(abs(z), 0, 1))*2, round_pvalues))
+
+coef_table <- t(matrix(paste0(t3_coef, "±", t3_se, " (", p, ")"), nrow=4))
+colnames(coef_table) <- rownames(t3_coef)
+rownames(coef_table) <- colnames(t3_coef)
+kable(coef_table, caption = "Coefficients of multinomial logistic regression model (p-values from Wald test)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+# print("Coefficients: "); s3$coefficients
+# print("\n \n Standard errors: "); s3$standard.errors
+
+# print("\n")
+# print("Deviance: "); s3$deviance
+# print("AIC: "); s3$AIC
+# s3$fitted.values
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+
+#**Coefficients on exponential scale.**
+t3_coef_exp <- t(exp(t3_coef))
+
+kable(t3_coef_exp, caption = "Coefficients of multinomial logistic regression model on exponential scale") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+
+
+## Add malignancies to the model. 
+Removed antiplatelet and smoking.
+
+68 covariates in total.
+```{r echo=FALSE}
+## Model 4: 
+# Y: DOACs are combined
+# Index VTE type: combined, ivc_rv_pv as reference level
+# Malignancies: individual cancers
+# Comorbidities: individual comorbidities
+# education: combined
+# division: combined
+# 62 covariates
+fm4 <- as.formula(paste("outcome2~", paste(c(vte_names1, malignancy_names), collapse="+"), "+ charlson_comorb_score + age_s + race + male + education2 + vte_history + hospitalized + division + income_range + product"))
+fit4 <- multinom(fm4, data=dat2, trace=FALSE)
+s4 <- summary(fit4)
+
+t4_coef <- round(data.matrix(s4$coefficients), 3)
+t4_se <- round(data.matrix(s4$standard.errors), 3)
+
+z <- s4$coefficients/s4$standard.errors
+# 2-tailed Wald z tests to test significance of coefficients
+p <- data.matrix(sapply((1-pnorm(abs(z), 0, 1))*2, round_pvalues))
+
+coef_table <- t(matrix(paste0(t4_coef, "±", t4_se, " (", p, ")"), nrow=4))
+colnames(coef_table) <- rownames(t4_coef)
+rownames(coef_table) <- colnames(t4_coef)
+kable(coef_table, caption = "Coefficients of multinomial logistic regression model  ± standard error (p-values from Wald test), with malignancies added") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Coefficients on exponential scale.**
+```{r echo=FALSE}
+t4_coef_exp <- t(exp(t4_coef))
+
+kable(t4_coef_exp, caption = "Coefficients of multinomial logistic regression model on exponential scale, with malignancies added") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+## Cross validation on multinomial logit
+
+library(glmnet)
+selected_vars <- c(vte_names_noref, "n_comorb","age_s","race","male", "education2", "vte_history","hospitalized","smoke","division","income_range","product","antiplatelet")
+x <- model.matrix(~., data = dat2[,selected_vars, with=FALSE])
+y <- (dat2[,outcome2])
+cvfit <- cv.glmnet(x, y, family="multinomial")
+plot(cvfit)
+```
+
+
+

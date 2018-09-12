@@ -1,0 +1,564 @@
+---
+title: "Hospitalizations"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+# VTE-related hospitalizations
+
+1. All inpatient diagnoses are considered. The inpatients diagnoses are identified from diag1 - diag25 from medical claims data, with matching confinement IDs from confinement claims data. 
+
+2. Confinement claims data with a primary diagnosis (diag1) of VTE is called VTE admission. Confinement claims data with a VTE diagnosis in any of diag1 - diag25 is called VTE-related admission.
+
+
+- We only consider hospitalizations after index VTE date.
+
+- There are 8 types of counts, depending on whether patients with "Not captured" at AC3Mo are censored:
+(not censored, censored) $\times$ (n\_hosp\_vte, n\_hosp\_nonvte, n\_hosp\_vte\_associated, n\_hosp\_nonvte\_associated), where n\_hosp\_vte and n\_hosp\_nonvte are counts of hospitalizations with VTE as the primary diagnosis, and n\_hosp\_vte\_associated and n\_hosp\_nonvte\_associated are counts of hospitalizations with VTE in any of diag1 - diagq5.
+
+- Length of record of a patient is from index VTE date to the eligibility end date from member data. Gaps during insurance enrollment periods are removed in calculating the length of record. Length of record is to adjust for time length in recording the number of hospitalizations.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis')
+
+library(dplyr)
+library(tidyr)  
+library(data.table)
+library(knitr)
+library(kableExtra)
+library(xlsx)
+library(readxl)
+library(ggplot2)
+library(reshape2)
+library(pscl)
+library(lme4)
+```
+
+
+
+## Use diag1 from confinement data as the primary reason for hospital admission.
+```{r}
+# obtain inpatient claims from medical claims data by matching conf_ID from confinement claims data
+medical <- fread("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/data/prog7_med.txt",
+                 select = c("patid", "Conf_Id", paste0("Diag", 1:25),
+                            "Fst_Dt"),
+                 colClasses = list(character=c("patid", "Conf_Id", paste0("Diag", 1:25), "Fst_Dt")))
+colnames(medical) <- tolower(colnames(medical))
+
+conf <- data.table(read_excel("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/data/confinement.xlsx"))
+colnames(conf) <- tolower(colnames(conf))
+# keep hospitalizations after index VTE date
+conf$admit_dt <- as.Date(conf$admit_dt)
+conf$disch_dt <- as.Date(conf$disch_dt)
+conf$index_dt <- as.Date(conf$index_dt)
+conf <- conf[index_dt <= admit_dt,]
+
+
+# merge 25 diagnoses from medical data into confinement data
+medical_inpatient <- medical[medical$conf_id!="",]
+# keep unique records
+medical_inpatient <- unique(medical_inpatient)
+medical_inpatient$fst_dt <- as.Date(medical_inpatient$fst_dt)
+rm(medical)
+# concatenate all diagnoses into one column
+# test <- data.frame(medical_inpatient[1:1000,])
+# test$all_diagnoses <- apply(test[,paste0("diag", 1:25)], 1, paste, collapse=",")
+
+
+vte_codebook <- data.table(read_excel("../others/All_codes_ICD9_NDC_HCPCS.xlsx", sheet="ICD9_VTE"))
+vte_codebook$ICD9_VTE <- as.character(vte_codebook$ICD9_VTE)
+
+## Not considering censoring
+# identify admissions with VTE as the primary diagnosis
+icd9_vte_codes <- vte_codebook$ICD9_VTE
+
+# (1) For admissions in both medical and confinement data, if a medical admission is vte related, then it should be vte related in confinement
+medical_inpatient$is.vte_admission <- medical_inpatient$diag1 %in% icd9_vte_codes
+medical_inpatient[, is.vte_admission.any := any(is.vte_admission), by=c("patid","conf_id", "fst_dt")]
+medical_inpatient_vte <- unique(medical_inpatient[, c("patid", "conf_id", "fst_dt", "is.vte_admission.any")])
+colnames(medical_inpatient_vte)[3] <- "admit_dt"
+conf2 <- merge(x=conf, y=medical_inpatient_vte, by=c("patid", "conf_id", "admit_dt"), all.x=TRUE)
+colnames(conf2)[which(colnames(conf2)=="is.vte_admission.any")] <- "is.vte_admission"
+
+# (2) For admissions in confinement but not medical data, diag1 determines if the admission is vte relatd
+conf_notInMedical <- conf2[is.na(conf2$is.vte_admission),]
+conf_notInMedical$is.vte_admission <- conf_notInMedical$diag1 %in% icd9_vte_codes
+conf2 <- rbind(conf2[!is.na(conf2$is.vte_admission),], conf_notInMedical)
+
+# count the number of vte related admissions
+conf2[, n_hosp_vte := sum(is.vte_admission), by=patid]
+
+# identify all post-indexVTE hospitalizations
+conf2[,  n_hosp_all := .N, by=patid]
+conf2[, `:=`(n_hosp_nonvte = n_hosp_all - n_hosp_vte)]
+conf2[, los_total := sum(los), by=patid]
+conf2 <- conf2[order(patid, admit_dt),]
+
+# add indexAC and AC3Mo
+dat <- data.table(readRDS("../data/analysis_data.rds"))
+# combine DOACs categories
+dat$index_ac2 <- with(dat, ifelse(index_ac %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", index_ac))
+dat$ac3mo2 <- with(dat, ifelse(ac3mo %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", ac3mo))
+dat2 <- unique(dat[, .(patid, index_dt, index_ac_dt, index_ac, index_ac2, ac3mo_dt, ac3mo, ac3mo2)])
+
+
+
+# obtain the number of day after index VTE for each drug fill
+dat$n_daysAfterIndexVTE <- with(dat, fill_dt - index_dt)
+dat$n_daysAfterIndexVTE.warfarin <- with(dat, n_daysAfterIndexVTE*(gen_name=="Warfarin"))
+dat$n_daysAfterIndexVTE.lmwh <- with(dat, n_daysAfterIndexVTE*(gen_name=="LMWH"))
+dat$n_daysAfterIndexVTE.doac <- with(dat, n_daysAfterIndexVTE*(gen_name %in% c("Rivaroxaban", "Dabigatran", "Apixaban", "Edoxaban")))
+dat$n_daysAfterIndexVTE.other <- with(dat, n_daysAfterIndexVTE*(gen_name=="Other"))
+
+
+
+### Consider censoring: remove information after stopping date for patients with NC at 3 months  --------------------
+conf3 <- merge(x=conf2[,-"index_dt"], y=dat2, by="patid")
+conf3[, not_censored := !(ac3mo2=="Not captured" & ac3mo_dt<=admit_dt)]
+conf3[, `:=`(n_hosp_censored = sum(not_censored),
+             n_hosp_vte_prim_censored = sum(not_censored*is.vte_admission)), by=patid]
+conf3[, `:=`(n_hosp_nonvte_prim_censored = n_hosp_censored - n_hosp_vte_prim_censored)]
+conf3[, los_total_censored := sum(los * not_censored), by=patid]
+
+n_hosp_names <- colnames(conf3)[grep("n_hosp", colnames(conf3))]
+conf3 <- unique(conf3[, (c("patid", n_hosp_names, "los_total", "los_total_censored")), with=FALSE])
+
+## add 0 counts to patients with no hospitalization records
+pat_no_conf <- dat2[!dat2$patid %in% conf3$patid, .(patid)]
+pat_no_conf[, (c(n_hosp_names, "los_total", "los_total_censored")) := 0]
+conf_counts <- rbind(conf3, pat_no_conf)
+conf_counts <- merge(x=conf_counts, y=dat2, by="patid")
+conf_counts <- merge(x=conf_counts, y=unique(dat[,.(patid, cancer_type_combined, index_vte_type)]), by="patid")
+
+
+
+### determine length of record ------------------------------------------
+member <- fread("../data/member.txt", 
+                select = c("Patid", "index_dt", "Eligeff", "Eligend"),
+                colClasses=list(character=1, Date=2:4, numeric=5))
+colnames(member) <- tolower(colnames(member))
+member$index_dt <- as.Date(member$index_dt, format = "%m/%d/%Y")
+member[, 3:4] <- lapply(member[, 3:4], as.Date)
+
+# keep enrollment periods that cover the index VTE date or start after the index VTE date
+member2 <- member[index_dt <= eligend, ]
+member2 <- merge(x=member2, y=dat2[,-"index_dt"], by="patid")
+
+member2$max_indexVTE_eligeff <- as.Date(apply(member2[, .(index_dt, eligeff)], 1, max))
+
+# patients with NC at AC3Mo are censored at the stopping date
+# member2$min_ncdate_eligend <- as.Date(apply(member2[, .(ac3mo2, eligend, ac3mo_dt)], 1, function(x) ifelse(x[[1]]=="Not captured", min(x[[2]], x[[3]]), x[[2]])))
+
+# member2[, enroll_length_thisperiod := as.numeric(min_ncdate_eligend - max_indexVTE_eligeff)]
+member2[, enroll_length_thisperiod := as.numeric(eligend - max_indexVTE_eligeff)]
+
+
+# length of record starts from index VTE date, and ranges over enrollment periods after index VTE date
+member2 <- member2[enroll_length_thisperiod >= 0, ]
+member2[, enroll_length := sum(enroll_length_thisperiod)+1, by=patid]
+member2 <- member2[patid %in% conf_counts$patid,]
+member3 <- unique(member2, by=c("patid", "enroll_length"))
+
+
+conf_counts <- merge(x=conf_counts, y=member3[, .(patid, enroll_length)], by="patid")
+conf_counts$ac3mo2 <- relevel(as.factor(conf_counts$ac3mo2), ref="LMWH")
+
+conf_counts <- data.frame(conf_counts)
+
+
+
+
+### obtain the number of days after index VTE date for each admission date
+conf2$n_daysAfterIndexVTE <- with(conf2, admit_dt - index_dt)
+patids <- unique(dat$patid)
+n_hosp_beforeACFill <- c()
+for(pat in patids){
+  test_dat <- dat[dat$patid==pat,]
+  if (pat %in% conf2$patid){
+    test_conf2 <- conf2[conf2$patid==pat,]
+    for (j in 1:nrow(test_dat)){
+      n_hosp_beforeACFill <- c(n_hosp_beforeACFill, sum(test_dat$n_daysAfterIndexVTE[j] > test_conf2$n_daysAfterIndexVTE))
+    }
+  }
+  else{
+    n_hosp_beforeACFill <- c(n_hosp_beforeACFill,rep(0, nrow(test_dat)))
+  }
+}
+
+dat$n_hosp_beforeACFill <- n_hosp_beforeACFill
+
+dat <- merge(x=dat, y=conf_counts[, c("patid", "enroll_length")], by="patid", all.x=TRUE)
+
+malignancy_names <- colnames(dat)[grep("malignancy_", colnames(dat))]
+n_daysAfterIndexVTE_names <- colnames(dat)[grep("n_daysAfterIndexVTE.", colnames(dat))]
+```
+
+
+
+
+
+```{r}
+# GLMM poisson
+fm1 <- as.formula(paste("n_hosp_beforeACFill~", paste(malignancy_names, collapse="+"), "+ vte_history + charlson_comorb_score + male + race + (1 +", paste(n_daysAfterIndexVTE_names, collapse="+"), "| patid)"))
+fit1 <- glmer(fm1, data=dat, family="poisson", control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=1e8)))
+summary(fit1)
+```
+
+
+
+
+
+
+
+
+```{r}
+library(randomForest)
+rf_fit1 <-  randomForest(ac3mo2 ~ charlson_comorb_score + male + , data=dat, ntree=100, mtry=2, importance=TRUE)
+```
+
+
+
+
+
+```{r}
+ggplot(data=conf_counts, aes(x = log(n_hosp_censored), y = log(los_total_censored))) + 
+  geom_point()
+
+ggplot(data=conf_counts, aes(x = log(n_hosp_all), y = log(los_total))) + 
+  geom_point() +
+  geom_jitter(width = 0.2, height = 0.2, size=0.8, color="salmon", alpha=0.2)
+```
+
+The number of hospitalizations and total length of stay are positively linearly associated on log scale. (Of course this should be true)
+
+
+
+## number of patients having a gap in enrollment after index VTE date
+
+```{r}
+member4 <- member[index_dt <= eligend, ]
+member4[patid %in% dat2$patid,][, N := .N, by=patid]
+length(member4[N>1, patid])
+```
+
+
+```{r}
+# check for over-dispersion
+conf_counts %>% group_by(ac3mo2) %>%
+  summarise(mean1=mean(n_hosp_vte_prim_censored), sd1=sd(n_hosp_vte_prim_censored),
+            mean2=mean(n_hosp_vte_associated_censored), sd2=sd(n_hosp_vte_associated_censored)) # note that the variances are greater than the means
+
+# check for 0 lengths
+hist(member3$enroll_length, main="Histogram of enrollment length")
+hist(member3$enroll_length[member3$enroll_length<=150], breaks=75, main="Histogram of enrollment length <= 150 days")
+print(head(member3[enroll_length==0,]))
+```
+
+
+```{r}
+hist(conf_counts$n_hosp_vte_prim_censored, main="Histogram of VTE hospitalizations", breaks=max(conf_counts$n_hosp_vte_prim_censored))
+hist(conf_counts$n_hosp_nonvte_prim_censored, main="Histogram of VTE hospitalizations", breaks=max(conf_counts$n_hosp_nonvte_prim_censored))
+```
+
+
+
+```{r cache=TRUE, fig.width=8,fig.height=5, echo=FALSE, eval=FALSE}
+### Boxplot with jittered points
+ggplot(data=conf_counts, aes(x=index_ac2, y=n_hosp_nonvte_associated_censored)) +
+  geom_boxplot(fill="salmon", alpha=0.7, color="salmon") +
+  # geom_point(color="burlywood1") +
+  geom_jitter(width = 0.3, size=0.5, color="skyblue", alpha=0.2) +
+  labs(title="Boxplot of VTE-related hospitalizations by AC3Mo",
+       x="AC3Mo", y="Number of hospitalizations")
+```
+
+```{r cache=TRUE, fig.width=6,fig.height=4, echo=FALSE, eval=FALSE}
+ggplot(data=conf_counts, aes(x=index_ac2, y=n_hosp_vte)) +
+  geom_boxplot(fill="salmon", alpha=0.7, color="salmon") +
+  # geom_point(color="burlywood1") +
+  geom_jitter(width = 0.3, size=0.5, color="skyblue", alpha=0.2) +
+  labs(title="Boxplot of VTE-related hospitalizations by IndexAC",
+       x="IndexAC", y="Number of hospitalizations")
+```
+
+
+### Plots of hospitalizations by ac3mo
+```{r}
+#' data should be a data.frame
+#' AC_variable = "index_ac2" or "ac3mo2"
+#' primary = TRUE if looking at admissions with VTE as the primary diagnosis, and FALSE if looking at admissions having a VTE diagnosis
+#' xmax_vte_indexAC=5, xmax_nonvte_indexAC=30, xmax_vte_AC3mo=5, xmax_nonvte_AC3mo=30 are the x axis limit of histogram of VTE/non-VTE by ac3mo type
+#' title_var is the variable that goes into the title of the plot
+plot_hospitalization <- function(data, AC_variable, primary, xmax_vte_indexAC=5, xmax_nonvte_indexAC=30, xmax_vte_AC3mo=5, xmax_nonvte_AC3mo=30, title_var){ 
+  AC_types <- unique(data[[AC_variable]])
+  groups <- c("VTE", "Non-VTE")
+  if(primary) groups_var_name <- c("n_hosp_vte_prim_all", "n_hosp_nonvte_prim_all") else
+    groups_var_name <- c("n_hosp_vte_associated_censored", "n_hosp_nonvte_associated_censored")
+  
+  # enlarge the histogram of hospitalizations by restricting counts 
+  if(AC_variable=="index_ac") his_xmax <- c(xmax_vte_indexAC, xmax_nonvte_indexAC) else
+    his_xmax <- c(xmax_vte_AC3mo, xmax_nonvte_AC3mo)
+
+  # layout where the boxplot is at top
+  n <- length(AC_types)
+  plot_dimension <- matrix(cbind(rep(1:2, n) + 4*rep(0:(n-1), each=2), rep(3:4, n) + 4*rep(0:(n-1), each=2)), ncol=2)
+  # plot_dimension <- matrix(c(1:4), nrow=2, byrow=FALSE)
+  
+  # plot layout
+  layout(mat = plot_dimension, height = rep(c(2,3), n))
+  par(oma=c(2,2,2,2))
+  
+  for(AC in AC_types){
+    sub_dat_byAC <- data[data[,AC_variable]==AC,]
+    
+    # j=1 for VTE, j=2 for non-VTE
+    for(j in 1:2){
+      # enlarge the histogram of non-VTE related hospitalizations by restricting counts n_hosp_non_vte to <= 30
+      sub_dat <- sub_dat_byAC[sub_dat_byAC[, groups_var_name[j]] <= his_xmax[j], ]
+            
+      # create legends: summary of counts
+      s <- summary(sub_dat[[groups_var_name[j]]])
+      leg <- paste0(paste0(names(s), sep=" "), round(s,1), collapse = "\n")
+    
+      par(mar=c(0, 4.5, 6, 1.5))
+      boxplot(sub_dat[[groups_var_name[j]]], horizontal=TRUE, ylim=c(0,max(sub_dat[[groups_var_name[j]]])), frame=F, xaxt="n", col = "salmon", main=paste0(title_var, " = ", AC, ", ", groups[j]), cex.main=1.5)
+    
+      par(mar=c(4, 4.5, 0, 1.5))
+      hist(sub_dat[[groups_var_name[j]]], xlim=c(0,his_xmax[j]), col = "salmon", breaks=seq(0,his_xmax[j],by=1), border=F, xlab="Number of hospitalizations", ylab = "Counts", main="", cex.lab=1.5, cex.axis=1.5)
+      
+      legend("topright", legend=leg, col="black", box.lty=0, xpd=TRUE, bty = "n", cex=1)
+    }
+  }
+  
+  # add main title
+  mtext(paste0("Number of VTE-related and non-VTE-related hospitalizations by ", title_var), outer = TRUE, cex = 1.2)
+}
+```
+
+
+### Hospitalizations by IndexAC
+```{r cache=TRUE, fig.width=8,fig.height=16}
+plot_hospitalization(conf_counts, "index_ac2", primary=TRUE, title_var = "IndexAC")
+```
+
+### Hospitalizations by AC3Mo
+```{r cache=TRUE, fig.width=8,fig.height=18}
+plot_hospitalization(conf_counts, "ac3mo2", primary=TRUE, title_var = "AC3Mo")
+```
+
+
+## Use diag1-5 from confinement data to identify hospitalizations having an VTE.
+### Hospitalizations by IndexAC
+```{r cache=TRUE, fig.width=8,fig.height=16}
+plot_hospitalization(conf_counts, "index_ac2", primary=FALSE, title_var = "IndexAC")
+```
+
+### Hospitalizations by AC3Mo
+```{r cache=TRUE, fig.width=8,fig.height=18}
+plot_hospitalization(conf_counts, "ac3mo2", primary=FALSE, title_var = "AC3Mo")
+```
+
+
+
+
+
+# Anticoagulant choices over time
+
+Only days of supply is used to determine which anticoagulant a patient was on. INR was not used as an indication of warfarin use.
+
+```{r}
+dat <- data.table(readRDS("../data/prog100_analysis_data.rds"))
+comorb_names <- colnames(dat)[grep("comorbidity|antiplatelet", colnames(dat))]
+dat3 <- dat[, .(patid, index_dt, fill_dt, category, gen_name, index_ac, index_ac_dt, ac3mo, ac3mo_dt, days_sup)]
+# combine DOACs categories
+dat3$index_ac2 <- with(dat3, ifelse(index_ac %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", index_ac))
+dat3$ac3mo2 <- with(dat3, ifelse(ac3mo %in% c("Apixaban", "Dabigatran", "Edoxaban", "Rivaroxaban"), "DOAC", ac3mo))
+
+# ACs of the same generic name prescribed in one day are considered , and the AC with the longest days of supply is kept
+dat3 <- dat3[, .SD[days_sup==max(days_sup)], by=.(patid, fill_dt, gen_name)]
+dat3$fill_days_after_indexVTE <- with(dat3, as.numeric(fill_dt - index_dt))
+dat3$fill_plus_supply_after_indexVTE <- with(dat3, as.numeric(fill_days_after_indexVTE + days_sup))
+max_days_after_indexVTE <- max(dat3$fill_plus_supply_after_indexVTE) #2775
+
+
+#' var_name = gen_name (separate DOACs), or category (combined DOACs)
+get_plot_data <- function(data, var_name){
+  ac_names <- sort(unique(data[[var_name]]))
+  p <- length(ac_names)
+  plot_data <- data.frame(matrix(NA, nrow=max_days_after_indexVTE+1, ncol=p+1))
+  plot_data[,1] <- 0:max_days_after_indexVTE
+  # initialize counts
+  plot_data[,-1] <- 0
+  
+  for(j in 1:nrow(data)){
+    which_ac <- which(data[[var_name]][j] == ac_names)
+    ind_start <- as.numeric(data$fill_dt[j] - data$index_dt[j])
+    ind_end <- as.numeric(ind_start + data$days_sup[j]) # prescription date also counts
+    # add 1 to the corresponding column of every time an AC is prescribed
+    plot_data[ind_start:ind_end, which_ac+1] <- plot_data[ind_start:ind_end, which_ac+1] + 1
+  }
+  
+  ac_names2 <- gsub("/| ", "_", ac_names)
+  colnames(plot_data)[1] <- "days_after_indexVTE"
+  colnames(plot_data)[1:p+1] <- paste0("n_pat_", ac_names2)
+  
+  # convert data into long format
+  plot_data2 <- melt(plot_data, id.vars = "days_after_indexVTE")
+  colnames(plot_data2)[2:3] <- c("ac_type", "n_pat")
+  plot_data2$ac_type <- gsub("n_pat_", "", plot_data2$ac_type)
+  
+  return(plot_data2)
+}
+
+plot_ac_trend <- function(data, plot_title, plot_subtitle=NULL, max_days=NULL){
+  if(!is.null(max_days)) data <- data[data$days_after_indexVTE <= max_days,]
+  ggplot(data, aes(x=days_after_indexVTE)) + 
+    geom_line(aes(y=n_pat, color=ac_type)) + 
+    labs(x="Days after index VTE date", y="# of patients",
+         title=plot_title, subtitle=plot_subtitle, color="AC types")
+}
+```
+
+
+### Separate DOACs, over all days after index VTE date
+```{r cache=TRUE}
+plot_data_separate_doacs <- get_plot_data(data=dat3, var_name = "gen_name")
+plot_ac_trend(data=plot_data_separate_doacs, plot_title = "# of patients on each anticoagulant over days after index VTE date", plot_subtitle="Separate DOACs")
+```
+
+### Separate DOACs, up to 90 days after index VTE date
+```{r cache=TRUE}
+plot_ac_trend(data=plot_data_separate_doacs, plot_title = "# of patients on each anticoagulant over up to 90 days after index VTE date", plot_subtitle="Separate DOACs", max_days = 90)
+```
+
+### Combined DOACs, over all days after index VTE date
+Combined DOACs = Apixaban + Dabigatran + Edoxaban + Rivaroxaban
+```{r cache=TRUE}
+plot_data_combined_doacs <- get_plot_data(data=dat3, var_name = "category")
+plot_ac_trend(data=plot_data_combined_doacs, plot_title = "# of patients on each anticoagulant over days after index VTE date", plot_subtitle="Combined DOACs")
+```
+
+### Combined DOACs, over up to 90 days after index VTE date
+```{r cache=TRUE}
+plot_ac_trend(data=plot_data_combined_doacs, plot_title = "# of patients on each anticoagulant over up to 90 days after index VTE date", plot_subtitle="Combined DOACs", max_days = 90)
+```
+
+A drastic change point at about 30 days after index VTE date occurs to all types of ACs.
+
+
+
+
+# Zero-inflated Poisson regression on the number of hospitalizations by AC3Mo.
+
+1. For patients with AC3Mo = Not captured, information after the stopping date is not used. So hospitalizations after the stopping date do not count.
+
+2. Length of record of a patient is from index VTE date to the eligibility end date from member data.
+
+```{r}
+## Plot predicted probabilities
+#' model = fitted model
+#' y = response variable name in the fitted model
+#' max_count = upper bound on the x-axis of the histograms
+plot_predicted_fitted <- function(model, max_count = NULL){
+  fitted.counts <- model$fitted.value
+  response_name <- as.character(model$formula)[2]
+  data1 <- data.frame(counts = c(fitted.counts, conf_counts[[response_name]]),
+                      ac3mo = rep(conf_counts$ac3mo2, 2),
+                      index_vte_type = rep(conf_counts$index_vte_type, 2),
+                      los_total = rep(conf_counts$los_total, 2),
+                      los_total_censored = rep(conf_counts$los_total_censored, 2),
+                      n_comorb = rep(conf_counts$n_comorb, 2),
+                      group = rep(c("Predicted", "Observed"), each=nrow(conf_counts)))
+  
+  if(!is.null(max_count)) data1 <- data1[data1$counts <= max_count, ]
+  
+  ggplot(data=data1, aes(x=counts, group=group, fill=group)) +
+  geom_histogram(data=data1, alpha=0.3, position="identity", binwidth = 2) +
+  facet_grid(~ac3mo)
+}
+```
+
+## Poisson regression on the number of VTE hospitalizations by AC3Mo.
+```{r fig.width=15,fig.height=4}
+fit.n_hosp_vte <- zeroinfl(data=conf_counts, n_hosp_vte_prim_censored ~ ac3mo2 + offset(log(enroll_length)) | 1, dist = "poisson")
+summary(fit.n_hosp_vte)
+print("Exponentiated coefficients"); exp(coef((fit.n_hosp_vte)))
+
+plot_predicted_fitted(model=fit.n_hosp_vte, max_count=25)
+```
+
+## Poisson regression on the number of non-VTE hospitalizations by AC3Mo.
+```{r fig.width=15,fig.height=4}
+fit.n_hosp_nonvte <- zeroinfl(data=conf_counts, n_hosp_prim_censored ~ ac3mo2 + offset(log(enroll_length)) | 1, dist = "poisson")
+summary(fit.n_hosp_nonvte)
+print("Exponentiated coefficients"); exp(coef((fit.n_hosp_nonvte)))
+
+plot_predicted_fitted(model=fit.n_hosp_nonvte, max_count=20)
+```
+
+
+```{r fig.width=15,fig.height=4}
+# negative binomial
+fit.n_hosp_nonvte.negbin <- zeroinfl(data=conf_counts, n_hosp_nonvte_prim_censored ~ ac3mo2 + offset(log(enroll_length)) | 1, dist = "negbin")
+summary(fit.n_hosp_nonvte.negbin)
+print("Exponentiated coefficients"); exp(coef((fit.n_hosp_nonvte.negbin)))
+
+plot_predicted_fitted(model=fit.n_hosp_nonvte.negbin, max_count=20)
+```
+
+
+```{r fig.width=15,fig.height=4}
+# add index vte type
+fit.n_hosp_nonvte <- zeroinfl(data=conf_counts, n_hosp_nonvte_prim_censored ~ ac3mo2 + offset(log(enroll_length)) | 1, dist = "poisson")
+summary(fit.n_hosp_nonvte)
+print("Exponentiated coefficients"); exp(coef((fit.n_hosp_nonvte)))
+
+plot_predicted_fitted(model=fit.n_hosp_nonvte, max_count=20)
+```
+
+
+
+*Why is the null likelihood greater than the full likelihood?*
+```{r}
+fit.n_hosp_nonvte.null <- update(fit.n_hosp_nonvte, . ~ 1)
+2 * (logLik(fit.n_hosp_nonvte) - logLik(fit.n_hosp_nonvte.null))
+pchisq(2 * (logLik(fit.n_hosp_nonvte) - logLik(fit.n_hosp_nonvte.null)), df = 5, lower.tail = FALSE)
+```
+
+
+### Compare zero-inflated Poisson and usual Poisson models
+```{r fig.width=15,fig.height=4}
+summary(fit.n_hosp_nonvte.glm <- glm(data=conf_counts, n_hosp_nonvte_prim_censored ~ ac3mo2 + index_vte_type + n_comorb + los_total_censored + offset(log(enroll_length)), family = "poisson"))
+# vuong(fit.n_hosp_nonvte.glm, fit.n_hosp_nonvte)
+
+plot_predicted_fitted(model=fit.n_hosp_nonvte.glm, max_count=25)
+```
+
+
+```{r fig.width=15,fig.height=4}
+fit1 <- zeroinfl(data=conf_counts, n_hosp_nonvte_prim_censored ~ ac3mo2 + index_vte_type + n_comorb + offset(log(enroll_length)) | 1, dist = "poisson")
+summary(fit1)
+plot_predicted_fitted(model=fit1, max_count=25)
+```
+
+
+
+# Obtain the number of distinct ICD-9 codes in medical data
+```{r}
+medical_info <- fread("../data/prog7_get_med.txt")
+
+diag_names <- paste0("diag", 1:25)
+
+icd9_3 <- medical_info[, (diag_names) := lapply(.SD, function(x) substr(x, 1, 3)), .SDcols = diag_names]
+
+# unique across all columns?
+```
+
+
+
+
+
+
