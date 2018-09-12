@@ -3,12 +3,15 @@
 /*.RData
 *.Rhistory
 
-data/*
-!data/analysis_data_example*.PNG
+preprocessing/data/*
+!preprocessing/data/analysis_data_example*.PNG
 
-*archive/
-*rsconnect/
-checklist.txt
-prep/tasks_prep.bat
-*.bat
-data_wrangling*
+preprocessing/*archive/
+preprocessing/AC_plot/*rsconnect/
+preprocessing/checklist.txt
+preprocessing/prep/tasks_prep.bat
+preprocessing/*.bat
+preprocessing/data_wrangling*
+
+data_freeze/20180830/*.rds
+data_freeze/20180830/*.txt
