@@ -11,11 +11,11 @@ library(tidyr)
 library(data.table)
 library(readxl)
 
-setwd("C:/Users/Mengbing Li/Box Sync/OptumInsight_DataManagement/AC_plot")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/AC_plot")
 
 
 ### READ IN COMPLETED SUBSET DATA SET
-patinfo <- readRDS("../data/subset_ac_days_multi_cancers.rds")
+patinfo <- readRDS("../subsetting/subset_3_removeNoACPeriod_multipleCancers.rds")
 
 ### 1. CREATE NUMERIC SCALE FOR ANTICOAGULANTS ON THE Y AXIS  ---------------
 patinfo2 <- patinfo %>%
@@ -148,16 +148,15 @@ saveRDS(confinfo2, "working_data_conf.rds")
 
 ### 4. ADD INSURANCE ENROLLMENT TO THE PLOT ---------------------------------
 ## determine length of record
-member <- fread("../data/member.txt", 
-                select = c("Patid", "index_dt", "Eligeff", "Eligend"),
-                colClasses=list(character=1, Date=2:4, numeric=5))
+member <- fread("../prep/prog14_get_member_details.txt", 
+                select = c("patid", "Eligeff", "Eligend"),
+                colClasses=list(character=1, Date=2:3))
 colnames(member) <- tolower(colnames(member))
-member2 <- member[patid %in% patinfo2$patid, ]
-member2$index_dt <- as.Date(member2$index_dt, format = "%m/%d/%Y")
-member2[, 3:4] <- lapply(member2[, 3:4], as.Date)
+member$eligeff <- as.Date(member$eligeff)
+member$eligend <- as.Date(member$eligend)
 
-# keep enrollment periods that cover the index VTE date or start after the index VTE date
-member2 <- member2[index_dt <= eligend, ]
-saveRDS(member2, "working_data_member.rds")
+# # keep enrollment periods that cover the index VTE date or start after the index VTE date
+# member2 <- member2[index_dt <= eligend, ]
+saveRDS(member, "working_data_member_details.rds")
 
 

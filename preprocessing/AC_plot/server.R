@@ -17,7 +17,7 @@ options(warn = -1)
 patinfo <- readRDS("working_data_patinfo.rds") 
 inr_info <- readRDS("working_data_inr.rds")
 confinfo <- readRDS("working_data_conf.rds")
-enroll <- readRDS("working_data_member.rds")
+enroll <- readRDS("working_data_member_details.rds")
 
 
 # Define server logic required to draw a histogram
@@ -158,7 +158,9 @@ shinyServer(function(input, output) {
       # shades on insurance enrollment periods
       geom_rect(data = selected_enroll(),
                 aes(xmin = eligeff, ymin = -5,
-                    xmax = eligend, ymax = 50),
+                    xmax = eligend, ymax = 50,
+                    text=paste(" Eligibility effective date: ", eligeff, "<br>",
+                               "Eligibility end date: ", eligend)),
                 fill = "gray50", alpha = 0.2,
                 inherit.aes = FALSE)
       

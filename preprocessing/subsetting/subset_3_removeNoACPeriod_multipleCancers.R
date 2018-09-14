@@ -17,9 +17,8 @@
 
 #!/usr/bin/Rscript
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/subsetting")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/subsetting")
 
-# sink("subset_ac_days_multi_cancers.log")
 
 options(java.parameters = "-Xmx8000m")
 
@@ -142,14 +141,14 @@ patinfo3 <- patinfo3 %>%
 
 
 # WRITE TABLE OUTPUT
-saveRDS(patinfo3, "../data/subset_ac_days_multi_cancers.rds")
+saveRDS(patinfo3, "../data/subset_3_removeNoACPeriod_multipleCancers.rds")
 
-wb <- loadWorkbook("../data/subset_ac_days_multi_cancers.xlsx")
+wb <- loadWorkbook("../data/subset_3_removeNoACPeriod_multipleCancers.xlsx")
 
-removeSheet(wb, sheetName="subset_ac_days_multi_cancers") # replace with new data frame
-sheet <- createSheet(wb, sheetName="subset_ac_days_multi_cancers")
+removeSheet(wb, sheetName="subset_3_removeNoACPeriod") # replace with new data frame
+sheet <- createSheet(wb, sheetName="subset_3_removeNoACPeriod")
 addDataFrame(patinfo3, sheet, row.names = FALSE)
-saveWorkbook(wb, "../data/subset_ac_days_multi_cancers.xlsx")
+saveWorkbook(wb, "../data/subset_3_removeNoACPeriod_multipleCancers.xlsx")
 
 
 
