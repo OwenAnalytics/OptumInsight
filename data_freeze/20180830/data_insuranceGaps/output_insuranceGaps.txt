@@ -1,0 +1,5 @@
+[1] "Summary of gaps:"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   59.0   212.0   365.0   547.1   731.0  3226.0 
+[1] "Mode of gaps:"
+[1] 365

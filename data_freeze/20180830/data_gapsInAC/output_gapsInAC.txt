@@ -1,0 +1,18 @@
+
+> print("Summary of days of supply")
+[1] "Summary of days of supply"
+
+> summary(patinfo2$days_sup)
+   Min. 1st Qu.  Median    Mean 3rd Qu. 
+   0.00   30.00   30.00   31.27   30.00 
+   Max. 
+ 180.00 
+
+> sink(NULL)
+[1] "Table of covered AC periods (rows) and covering AC periods (columns)"
+          
+           DOACS LMWH Other Warfarin
+  DOACS      505   36     2       74
+  LMWH       158 1332     6     2740
+  Other       11    7    45       69
+  Warfarin   144  453    18     9154

@@ -16,152 +16,135 @@ library(dplyr)
 library(tidyr)
 library(data.table)
 library(readxl)
+library(ggplot2)
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20180830/data_gapsInAC")
 
-### READ IN COMPLETED SUBSET DATA SET
+## read in patient data
 patinfo <- readRDS("../patient_data.rds")
 
-### 1. CREATE NUMERIC SCALE FOR ANTICOAGULANTS ON THE Y AXIS  ---------------
-patinfo2 <- patinfo %>%
-  group_by(patid, category) %>%
-  mutate(id = (category=="DOACS")*seq(from=45, by=-0.25, length.out=n()) +
-           (category=="LMWH")*seq(from=30, by=-0.25, length.out=n()) +
-           (category=="Warfarin")*seq(from=15, by=-0.25, length.out=n()),
-         category_num = 36*(category=="DOACS") + 24*(category=="LMWH") + 8*(category=="Warfarin"),
-         fill_sup = fill_dt+days_sup) %>%
-  ungroup(patid, category)
-# SAVE THE DATA SET
-saveRDS(patinfo2, "../AC_plot/working_data_patinfo.rds")
+patinfo2 <- patinfo[, .(patid, clmid, index_dt, fill_dt, category, days_sup)]
+
+pdf("histogram_daysOfSupply.pdf")
+hist(patinfo2$days_sup, main = "Histogram of days of supply",
+     xlab = "Days of supply")
+dev.off()
+
+sink("output.txt", append = FALSE)
+print("Summary of days of supply")
+summary(patinfo2$days_sup)
+sink(NULL)
+
+#' Logic: 
+#' 1. Remove AC prescription periods covered entirely in another AC
+#' period: fill date >= previous fill date & end_dt <= previous end_dt. 
+#' 2. Check gaps due to lack of insurance coverage:
+#'  fill_dt <= eligend & lead(fill_dt) >= lead(eligeff)
+#' 3. Check gaps due to hospitalization
+#'  fill_dt <=disch_dtligend & lead(fill_dt) >= lead(admit_dt)
 
 
+## 1. Find covered AC periods --------------------------------------------
 
-### 2. CREATE NUMERIC SCALE FOR INR LAB ON THE Y AXIS -----------------------
+#' The entire AC period is covered by the previous AC period, which.
+#' in particular means fill date >= previous fill date & 
+#' end_dt <= previous end_dt. 
+#' 1) First order the data by ascendingly patid, fill_dt, and end_dt. 
+#' 2) Then remove records satisfying the constraint above. 
 
-# ADD INR TEST DATES
-lab_all <- data.table(fread("../data/prog1_lab_all.txt",
-                            colClasses = c("character", "Date", "character", "Date",
-                                           "numeric", "numeric", "numeric", "character")))
-colnames(lab_all) <- tolower(colnames(lab_all))
+# identify AC periods
+patinfo2[, acEndDt := fill_dt + days_sup]
 
-# get only inr test
-inr_names <- c("*INTR.*NORM.*RATIO*|*INR.*|*I\\.*N\\.*R\\.*|*NORMALIZED.*|*PROTHROMBIN*|*PROTIME*")
-inr_info <- lab_all[grep(inr_names, toupper(lab_all$tst_desc), value=FALSE),]
-inr_names_not <- c("DILUTE PROTHROMBIN TIME(DPT)", "PROTHROMBIN FRAGMENT 1+2 AG",
-                   "PROTHROMBIN FRAGMENT 1+2 MOAB", "PROTHROMBIN G20210A",
-                   "VANCOMYCINRANDOM", "PROTHROMBIN ANTIBODIES, IGM", 
-                   "PROTHROMBIN ANTIBODIES, IGG", "PROTHROMBIN GENE MUTATION",
-                   "PROTHROMBIN GENE MUTATION INTE", "ANTIPROTHROMBIN ANTIBODY, IGM",
-                   "ANTIPROTHROMBIN ANTIBODY, IGG", "PROTHROMBIN AB.IGG",
-                   "PROTHROMBIN AB.IGM", "GENTAMICINRANDOM", "PROTHROMBIN 20210A MUT.ANAL.F2",
-                   "DILUTE PROTIME SCREEN", "SODIUM,URINE,NORMALIZED", 
-                   "PROTHROMBIN GENE ANALYSIS", "PROTHROMBIN G20210A GENE MUTAT",
-                   "FibroMeter Prothrombin Index", "Protein, Urine, Normalized", 
-                   "INR,NON-MEDICATED RANGE", "ANTIPROTHROMBIN AB IGG/IGM",
-                   "FibroMeter Prothrombin Index")
-inr_info <- inr_info[! trimws(toupper(tst_desc)) %in% toupper(inr_names_not),] 
-inr_info$index_dt <- as.Date(inr_info$index_dt)
-inr_info$lab_dt <- as.Date(inr_info$lab_dt)
+## Step 2: determine continuity of AC trajectory -------------------
+patinfo2.ordered <- patinfo2[order(patid, fill_dt, -acEndDt),]
 
-inr_info2 <- unique(inr_info, by=c("patid", "lab_dt"))
-inr_info2$inr_dt <- inr_info2$lab_dt
 
-# DETERMINE VALUES OF POINTS OF LAB INR ON THE Y AXIS IN THE PLOT
-inr_info2$patid <- as.factor(inr_info2$patid)
-patid_levels <- levels(inr_info2$patid)     
-inr_info2$inr_num <- rep(0,nrow(inr_info2))
-inr_info2$category <- rep("0",nrow(inr_info2))
+## check whether each AC period is covered entirely by any other AC periods
 
-# INITIALIZE A VECTOR TO STORE THE VALUE FOR INR ON THE Y AIS
-for( patids in patid_levels ){
-  sub_inr <- inr_info2[inr_info2$patid==patids,]
-  sub_patinfo <- patinfo2[patinfo2$patid==patids,]
-  fill_dt_c <- sub_patinfo$fill_dt
-  fill_sup_dt_c <- sub_patinfo$fill_sup
-  id_c <- sub_patinfo$id
-  category_c <- as.character(sub_patinfo$category)
-  inr_dt_c <- sub_inr$inr_dt
-  n_fill <- length(fill_dt_c)
-  n_inr <- length(inr_dt_c)
-  sub_inr_num <- rep(0,n_inr)
-  sub_inr_category <- rep("0", n_inr)
-  
-  for(i in 1:n_inr){
-    inr_dt_i <- inr_dt_c[i]
-    max_dt <- max(fill_sup_dt_c)
-    
-    if (inr_dt_i <= max_dt) {
-      tmp <- (inr_dt_i >= fill_dt_c & inr_dt_i <= fill_sup_dt_c)
-      
-      # INR HAPPENS BEFORE THE LAST END OF SUPPLY DATE
-      # CASE 1: INR HAPPENS BETWEEN FILL DATE AND END OF SUPPLY DATE
-      if (any(tmp)) {
-        # FIND THE INDEX OF THE FIRST OVERLAPPING OCCURRENCE
-        min_tmp <- which.max(tmp)
-        sub_inr_num[i] <- id_c[min_tmp]
-        sub_inr_category[i] <- category_c[min_tmp]
-      }
-      
-      # CASE 2: INR DOES NOT HAPPEN BETWEEN THE OVERLAPPING PERIOD OF 
-      # ANY FILL DATE AND END OF SUPPLY DATE
-      else if (!any(tmp)) {
-        tmp2 <- (inr_dt_i > fill_sup_dt_c & inr_dt_i > fill_dt_c)
-        min_tmp <- which.min(tmp2)
-        sub_inr_num[i] <- id_c[min_tmp]
-        sub_inr_category[i] <- category_c[min_tmp]
-      }
+# subset patients who had only one fill. Such AC periods are not covered
+patinfo3 <- patinfo2.ordered[!(duplicated(patinfo2.ordered$patid)|duplicated(patinfo2.ordered$patid, fromLast=TRUE)),]
+patinfo3[, covered:=FALSE]
+
+# check patients with more than one fill. covered = FALSE if the AC
+# period is not covered
+for(pat in unique(patinfo2.ordered[!patid %in% patinfo3$patid,patid])){
+  tmp <- patinfo2.ordered[patid==pat,][,covered:=FALSE]
+  n <- nrow(tmp)
+  for(j in n:2){
+    for(k in j-1:1){
+      test <- (tmp$fill_dt[j]>=tmp$fill_dt[k] & tmp$acEndDt[j]<=tmp$acEndDt[k])
+      if (test) {break}
     }
-    
-    # CASE 3: INR HAPPENS AFTER THE LAST END OF SUPPLY DATE
-    else {
-      min_tmp <- which.max(fill_sup_dt_c)
-      sub_inr_num[i] <- id_c[min_tmp]
-      sub_inr_category[i] <- category_c[min_tmp]
-    }
-    
+    tmp$covered[j] <- test
   }
-  inr_info2$inr_num[inr_info2$patid==patids] <- sub_inr_num
-  inr_info2$category[inr_info2$patid==patids] <- sub_inr_category
+  patinfo3 <- rbind(patinfo3, tmp)
 }
 
-inr_info2$category <- as.factor(inr_info2$category)
 
-# SAVE THE DATA SET
-saveRDS(inr_info2, "working_data_inr.rds")
+# identify which AC periods are covering smaller periods
+patinfo3 <- patinfo3[order(patid, fill_dt, -acEndDt)]
+patinfo3$coveringAC <- with(patinfo3, 
+      ifelse(covered==TRUE, lead(category), ""))
+
+# identify covered AC periods
+acCovered <- patinfo3[covered==TRUE,]
+
+sink("output_gapsInAC.txt", append = TRUE)
+cat("\n")
+print("The number of covered AC periods is")
+sum(table(acCovered$category, acCovered$coveringAC)) 
+
+cat("\n")
+print("Table of covered AC periods (rows) and covering AC periods (columns)")
+table(acCovered$category, acCovered$coveringAC)
+sink(NULL)
+
+ggplot(acCovered, aes(x=days_sup)) +
+  geom_histogram(binwidth=5, colour="salmon", fill="white") + 
+  facet_grid(category ~ .) +
+  labs(title="Histograms of days of supply of covered anticoagulant periods",
+       x="Days of supply",
+       y="Frequency") 
+ggsave("histogram_coveredAC_dayOfSupply.pdf")
+
+#remove covered AC periods
+patinfo.noCoveredAC <- patinfo3[patinfo3$covered==FALSE,]
+patinfo.noCoveredAC$coveringAC <- NULL
 
 
 
+### 2. Identify gaps in AC periods due to lack of insurance coverage -------
 
-### 3. CREATE NUMERIC SCALE FOR CONFINEMENT ON THE Y AXIS  ------------------
+#' We care about the cease of an AC trajectory of two types:
+#' (1) There is a gap greater than n days (say 30) between 
+#' two AC trajectories. Prescriptions of at least two ACs is 
+#' necessary for such a gap.
+#' (2) The end of the most recent AC trajectory. Check whether 
+#' the insurance end date is very close to the end of the trajectory.
 
-confinfo <- readRDS("../data/prog6_conf_combine_admissions.rds")
+# get patients having at least two rows
+patinfo_ge2AC <- patinfo.noCoveredAC[patinfo.noCoveredAC[, .I[.N > 1], by = patid]$V1,]
+patinfo_ge2AC <- patinfo_ge2AC[order(patid, fill_dt)]
+gapLength <- 30
+patinfo_ge2AC[, gap := lead(fill_dt) - acEndDt > gapLength, by = patid]
+patinfo_ge2AC[, `:=`(acDtBeforeGap = if_else(gap==TRUE, fill_dt, as.Date("1970-01-01")),
+                     acDtAfterGap = if_else(gap==TRUE, lead(fill_dt), as.Date("1970-01-01")))]
+patinfo_haveGap <- patinfo_ge2AC[gap==TRUE, ]
 
-# REMOVE DIAGNOSIS INFORMATION
-confinfo2 <- confinfo[,-5:-9]
-confinfo2 <- confinfo2 %>%
-  filter(disch_dt_combined >= index_dt) %>%
-  group_by(patid) %>%
-  arrange(patid, admit_dt, disch_dt_combined) %>%
-  mutate(id = sequence(n()),
-         index_dt = as.Date(index_dt),
-         admit_dt = as.Date(admit_dt),
-         disch_dt_combined = as.Date(disch_dt_combined))
-saveRDS(confinfo2, "working_data_conf.rds")
-
-
-
-
-### 4. ADD INSURANCE ENROLLMENT TO THE PLOT ---------------------------------
-## determine length of record
-member <- fread("../prep/prog14_get_member_details.txt", 
-                select = c("patid", "Eligeff", "Eligend"),
-                colClasses=list(character=1, Date=2:3))
+# read in insurance coverage information from member_details
+member <- fread("../member_details.txt", 
+                select = c("patid", "Pat_PlanId", "Eligeff", "Eligend"),
+                colClasses=list(character=1:2, Date=3:4))
 colnames(member) <- tolower(colnames(member))
 member$eligeff <- as.Date(member$eligeff)
 member$eligend <- as.Date(member$eligend)
+member <- member[order(patid, eligeff, eligend),]
 
-# # keep enrollment periods that cover the index VTE date or start after the index VTE date
-# member2 <- member2[index_dt <= eligend, ]
-saveRDS(member, "working_data_member_details.rds")
+
+gaps_elig <- merge(x = patinfo_haveGap, y = member, by = "patid")
+
+
+
+
 
 

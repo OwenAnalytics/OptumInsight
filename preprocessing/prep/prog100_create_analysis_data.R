@@ -30,18 +30,10 @@
 #' 7. RACE
 #' 8. REGION
 #' 9. INSURANCE
-#' 10. AVERAGE RX PER PROVIDER (TBD)
-#' 11. AVERAGE UNIQUE RX PER PROVIDER (TBD)
-#' 12. PROVIDER SPECPECIATY (TBD)
-#' 13. COPAY 
-#' 14. POS CODES (TBD)
+#' 10. COPAY 
 #######################################################################################
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/prep")
-
-# sink("prog100_create_analysis_data.log")
-
-# options(java.parameters = "-Xmx8000m")
 
 library(dplyr)
 library(tidyr)

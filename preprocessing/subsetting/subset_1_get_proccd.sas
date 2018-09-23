@@ -26,7 +26,7 @@ proc options option=utilloc; run;
 proc options option=threads; run;
 
 
-libname data "C:\Users\mengbing\Box Sync\OptumInsight_DataManagement\data";
+libname subset "C:\Users\mengbing\Box Sync\OptumInsight_DataManagement\preprocessing\subsetting";
 libname medical "X:\DVT\Medical_vte";
 libname facility "X:\DVT\Facility_vte";
 libname member "X:\DVT\Member_vte";

@@ -1,0 +1,16 @@
+[1] "The number of 3-digit ICD-9 codes is "
+[1] 1190
+[1] "The number of 4-digit ICD-9 codes is "
+[1] 5836
+[1] "The number of 5-digit ICD-9 codes is "
+[1] 6106
+
+[1] "Summary of counts of 3-digit ICD-9 codes:"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1     220    1616    8630    7089  154484 
+[1] "Summary of counts of 4-digit ICD-9 codes:"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+     -1      10      77    1438     563   81880 
+[1] "Summary of counts of 5-digit ICD-9 codes:"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   -1.0    -1.0     1.0   174.8    15.0 37110.0 

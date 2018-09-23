@@ -30,7 +30,8 @@ library(readxl)
 
 
 ### READ IN COMPLETED SUBSET DATA SET
-patinfo <- read_excel("../data/subset_2_inclusionExclusion_withDuplicates.xlsx", sheet = "subset_2_withDuplicates")
+patinfo <- read_excel("subset_2_inclusionExclusion_noDuplicates.xlsx",
+                      sheet = "subset_2_noDuplicates")
 patinfo[,c("fill_dt","index_dt","index_cancer_dt")] <- 
   lapply(patinfo[,c("fill_dt","index_dt","index_cancer_dt")], as.Date)
 
@@ -141,14 +142,14 @@ patinfo3 <- patinfo3 %>%
 
 
 # WRITE TABLE OUTPUT
-saveRDS(patinfo3, "../data/subset_3_removeNoACPeriod_multipleCancers.rds")
+saveRDS(patinfo3, "subset_3_removeNoACPeriod_multipleCancers.rds")
 
-wb <- loadWorkbook("../data/subset_3_removeNoACPeriod_multipleCancers.xlsx")
+wb <- loadWorkbook("subset_3_removeNoACPeriod_multipleCancers.xlsx")
 
 removeSheet(wb, sheetName="subset_3_removeNoACPeriod") # replace with new data frame
 sheet <- createSheet(wb, sheetName="subset_3_removeNoACPeriod")
 addDataFrame(patinfo3, sheet, row.names = FALSE)
-saveWorkbook(wb, "../data/subset_3_removeNoACPeriod_multipleCancers.xlsx")
+saveWorkbook(wb, "subset_3_removeNoACPeriod_multipleCancers.xlsx")
 
 
 

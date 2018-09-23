@@ -64,7 +64,7 @@ medical.distinct.long <- medical.distinct.long[order(medical.distinct.long$patid
 
 
 # get icd-9 codes from confinement data
-confinement <- readRDS("confinement.rds")
+confinement <- readRDS("../confinement.rds")
 confinement2 <- confinement[, c("patid", "conf_id", "admit_dt", paste0("diag", 1:5))]
 colnames(confinement2)[which(colnames(confinement2)=="admit_dt")] <- "fst_dt"
 confinement2$fst_dt <- as.Date(confinement2$fst_dt)
@@ -130,11 +130,11 @@ data_icd9[, count_5digits := ifelse(icd9_5digits=="", -1L, .N), by = icd9_5digit
 data_icd9.counts <- unique(data_icd9)
 
 ## find the number of roots at each level
-sink("restults_icd9Structure.txt", append = FALSE, split = FALSE)
+sink("output_icd9Structure.txt", append = FALSE, split = FALSE)
 print("The number of 3-digit ICD-9 codes is "); length(unique(data_icd9.counts$icd9_3digits)) #1190
 print("The number of 4-digit ICD-9 codes is "); length(unique(data_icd9.counts$icd9_4digits)) #5836
 print("The number of 5-digit ICD-9 codes is "); length(unique(data_icd9.counts$icd9_5digits)) #6106
-sink()
+sink(NULL)
 
 
 ## histogram of icd-9 code counts at each level
@@ -157,7 +157,7 @@ ggplot(plot.data, aes(x=count)) +
 ggsave("histogram_countICD9.pdf")
 
 
-sink("restults_icd9Structure.txt", append = TRUE, split = FALSE)
+sink("output_icd9Structure.txt", append = TRUE, split = FALSE)
 
 cat("\n")
 
@@ -169,6 +169,6 @@ summary(data_icd9.counts$count_4digits)
 
 print("Summary of counts of 5-digit ICD-9 codes:")
 summary(data_icd9.counts$count_5digits)
-sink()
+sink(NULL)
 
 
