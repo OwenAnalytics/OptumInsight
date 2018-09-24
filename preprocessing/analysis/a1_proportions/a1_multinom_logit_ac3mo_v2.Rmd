@@ -65,7 +65,7 @@ Here is description of variables used in the model:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/analysis/a1_proportions')
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/analysis/a1_proportions')
 
 library(dplyr)
 library(tidyr)  
@@ -81,7 +81,7 @@ library(nnet)
 
 
 ```{r echo=FALSE}
-dat <- data.table(readRDS("../../data/analysis_data.rds"))
+dat <- fread("../../data/patient_data.txt")
 
 vars_not_wanted <- c("clmid", "fill_dt", "category", "brand_name", "gen_name", "copay", "copay_sum", "days_sup", "quantity", "strength", "npi")
 dat1 <- unique(dat[,(vars_not_wanted) := NULL])
@@ -152,8 +152,6 @@ dat2 <- within(dat2, education2 <- relevel(education2, ref = "C"))
 dat2 <- within(dat2, race <- relevel(race, ref = "W"))
 dat2 <- within(dat2, income_range <- relevel(income_range, ref = "6"))
 dat2 <- within(dat2, product <- relevel(product, ref = "HMO"))
-dat2 <- within(dat2, ac3mo_copay_rng <- relevel(as.factor(ac3mo_copay_rng), ref="[0,10)"))
-dat2 <- within(dat2, ac4mo_copay_rng <- relevel(as.factor(ac4mo_copay_rng), ref="[0,10)"))
 
 # combine asian and hispanic for race
 dat2[,race2 := as.factor(ifelse(as.character(race) %in% c("H", "A"), "AsianHispanic", as.character(race)))]
@@ -224,9 +222,9 @@ create_coefficients_table <- function(model, title_index){
 $\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income\_range + ac3mo\_copay\_range + product + age\_s + male + race, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
 
 ```{r echo=FALSE}
-fm5 <- as.formula(paste("ac3mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + ac3mo_copay_rng + product + age_s + male + race"))
-fit5 <- multinom(fm5, data=data_ac3mo, trace=FALSE)
-create_coefficients_table(fit5, "5")
+fm.ac3mo <- as.formula(paste("ac3mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
+fit.ac3mo <- multinom(fm.ac3mo, data=data_ac3mo, trace=FALSE)
+create_coefficients_table(fit.ac3mo, "")
 ```
 
 
@@ -260,49 +258,16 @@ for a patient with PE and UE simutaneously, the probability of AC3Mo being DOAC 
 
 
 # Multinomial logistic regression on AC at 4 months
-
-### Model 1:
-$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
-
-i.e. LMWH is the reference level for AC4Mo.
+### Model:  
+$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income\_range + ac3mo\_copay\_range + product + age\_s + male + race, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
 
 ```{r echo=FALSE}
-fm1_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score"))
-fit1_4mo <- multinom(fm1_4mo, data=data_ac4mo, trace=FALSE)
-create_coefficients_table(fit1_4mo, "1")
+fm.ac4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
+fit.ac4mo <- multinom(fm.ac4mo, data=data_ac4mo, trace=FALSE)
+create_coefficients_table(fit.ac4mo, "")
 ```
 
 
-
-### Model 2:
-$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
-
-```{r echo=FALSE}
-fm2_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division"))
-fit2_4mo <- multinom(fm2_4mo, data=data_ac4mo, trace=FALSE)
-create_coefficients_table(fit2_4mo, "2")
-```
-
-
-## Model 3:
-$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income\_range + ac4mo\_copay\_range, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
-
-```{r echo=FALSE}
-fm3_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + ac4mo_copay_rng"))
-fit3_4mo <- multinom(fm3_4mo, data=data_ac4mo, trace=FALSE)
-create_coefficients_table(fit3_4mo, "3")
-```
-
-
-
-## Model 4:
-$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC4Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income\_range + ac4mo\_copay\_range + product, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
-
-```{r echo=FALSE}
-fm4_4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + ac4mo_copay_rng + product"))
-fit4_4mo <- multinom(fm4_4mo, data=data_ac4mo, trace=FALSE)
-create_coefficients_table(fit4_4mo, "4")
-```
 
 
 
@@ -311,11 +276,18 @@ create_coefficients_table(fit4_4mo, "4")
 ```{r echo=FALSE, eval=FALSE}
 # running ANOVA to compare mean ages across groups
 fit_age <- aov(age ~ ac3mo2, data=data_ac3mo)
-summary(fit_age)
+s.fit_age <- summary(fit_age)
+s.fit_age$`Pr(>F)`
+
+fit_age.anova <- anova(lm(age ~ ac3mo2, data=data_ac3mo))
+s.fit_age <- summary(fit_age)
 
 # running ANOVA to compare sex proportions across groups
 fit_sex <- aov(male ~ ac3mo2, data=data_ac3mo)
 summary(fit_sex)
+
+
+summary(fit.age_cat <- glm(age_cat ~ ac3mo2, family = "poisson", data = data_ac3mo))
 ```
 
 
