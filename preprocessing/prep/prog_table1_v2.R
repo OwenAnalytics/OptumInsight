@@ -20,7 +20,7 @@
 # Table 1 version 2 tabulates data by ac3mo and ac4mo.
 #######################################################################################
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/prep")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/prep")
 
 
 library(dplyr)
@@ -37,7 +37,7 @@ add_wb <- function(sheetnm, data, rownm = FALSE){
   addDataFrame(data, sheet, row.names = rownm) 
 }
 
-analysis_data <- data.table(readRDS("../data/analysis_data.rds"))
+analysis_data <- data.frame(fread("../data/patient_data.txt"))
 
 # SELECT DISTINCT ROWS AND CREATE NEW CATEGORIES
 analysis_data2 <- analysis_data %>%

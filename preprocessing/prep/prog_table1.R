@@ -273,7 +273,7 @@ table_calculate <- function(colvar){
   table1_history <- insertRow(table1_history, rep(NA,ncol(table1_history)),
                               paste("During the 12 mo prior to index VTE"), 1)
   table1_anti <- table1_tab(antiplainfo3, "antiplatelet", colvar, NULL, "Antiplatelets")
-  table1_mag <- table1_tab(analysis_data2, "cancer_type_combined", colvar, NULL, "Maglinancy")
+  table1_mag <- table1_tab(analysis_data2, "cancer_type_combined", colvar, NULL, "Malignancy")
   table1_mag <- insertRow(table1_mag, rep(NA,ncol(table1_mag)), paste("Any time"), 1)
   table1_vte <- table1_tab(analysis_data2, "index_vte_type", colvar, NULL, "Index VTE Type")
   table1_comorb <- table1_tab(comorbinfo2, "comorbidities", colvar, NULL, "Charlson Co-morbidity index")

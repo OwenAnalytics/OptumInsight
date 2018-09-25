@@ -37,6 +37,7 @@ library(readxl)
 library(reshape2)
 library(survival)
 library(data.table)
+library(MASS)
 
 add_wb <- function(sheetnm, data, rownm = FALSE){
   removeSheet(wb, sheetName=sheetnm) # replace with new data frame
@@ -60,6 +61,7 @@ analysis_data2 <- analysis_data %>%
     TRUE ~ ac4mo
   )
   )
+
 
 # add antiplatelet information
 antiplainfo <- read_excel("../data/prog9_antiplatelets.xlsx", sheet = "prog9_antiplatelets")
@@ -123,14 +125,19 @@ table1_tab <- function(data, rowvar, colvar, rownm, titleRow){
 }
 
 
+round_pvalues <- function(x){
+  if (x < 0.0001) return("<0.0001") else if (0.0001 <= x & x < 0.001)
+    return("<0.001") else if (0.001 <= x) return(round(x, 3))
+}
+
 
 table_calculate <- function(colvar){
   # OUTPUT PATIENTS WHO GOT MULTIPLE AC ON THE FIRST FILL DATE AFTER INDEX VTE
 
   # REMOVE NA VALUES TO AVOID ERROR IN TABULATION
   rm_na <- function(variable, colvar){
-    as.data.frame(analysis_data2 %>% 
-                    select(patid, colvar, variable) %>%
+    as.data.frame(analysis_data2 %>%
+                    dplyr::select(patid, colvar, variable) %>%
                     filter(!is.na(variable)))
   }
 
@@ -225,7 +232,7 @@ table_calculate <- function(colvar){
   table1_history <- insertRow(table1_history, rep(NA,ncol(table1_history)),
                               paste("During the 12 mo prior to index VTE"), 1)
   table1_anti <- table1_tab(antiplainfo2, "antiplatelet", colvar, NULL, "Antiplatelets")
-  table1_mag <- table1_tab(analysis_data2, "cancer_type_combined", colvar, NULL, "Maglinancy")
+  table1_mag <- table1_tab(analysis_data2, "cancer_type_combined", colvar, NULL, "Malignancy")
   table1_mag <- insertRow(table1_mag, rep(NA,ncol(table1_mag)), paste("Any time"), 1)
   table1_vte <- table1_tab(analysis_data2, "index_vte_type", colvar, NULL, "Index VTE Type")
   table1_comorb <- table1_tab(comorbinfo2, "comorbidities", colvar, NULL, "Charlson Co-morbidity index")
@@ -248,27 +255,93 @@ table1_ac4mo <- table_calculate("ac4mo2")
 
 
 
-### Add p-values of ANOVA ---------------------------------------------------
-analysis_data2$ac3mo2 <- as.factor(analysis_data2$ac3mo2)
-analysis_data2$age_cat <- as.factor(analysis_data2$age_cat)
 
-fit_age.anova <- aov(ac3mo2 ~ age_cat, data = analysis_data2)
-s.fit_age <- summary(fit_age)
+### Add p-values comparing columns ------------------------------------------
+
+#' Add p-values of LRT from independence loglinear model:
+#' add_p_catVar adds p values calculated from likelihood ratio test of an
+#' independence loglinear model. 
+#' data = input data set
+#' summary_table = pre-calculated table. table1_ac3mo or table1_ac4mo
+#' row.variable = covariates in Table 1
+#' col.variable = AC at 3 months or at 4 months
+#' table_rowname = row name of summary_table, to which row the p-value should go
+add_p_catVar <- function(data, summary_table, row.variable, col.variable, table_rowname){
+  nlevels_row <- length(unique(data[[row.variable]]))
+  nlevels_col <- length(unique(data[[col.variable]]))
+  tab <- array(table(data[[row.variable]], data[[col.variable]]),
+               c(nlevels_row, nlevels_col))
+  fit <- loglm(~ 1 + 2, tab)
+  p_var <- round_pvalues(1 - pchisq(fit$lrt, fit$df))
+  row.index <- which(rownames(summary_table) == table_rowname)
+  summary_table$p[row.index] <- p_var
+  return(summary_table)
+}
 
 
+add_p_to_AC <- function(ac.var, summary_table_name){
+  # initialize p-value column
+  summary_table_name[["p"]] <- NA
+  
+  # add p-value of overall counts
+  overall <- table(analysis_data2[[ac.var]])
+  p_overall <- round_pvalues(chisq.test(overall)$p.value)
+  overall.index <- which(rownames(summary_table_name) == "Overall Counts (Row %)")
+  summary_table_name[["p"]][overall.index] <- p_overall
+  
+  # Add p-values of ANOVA 
+  formula.age <- paste("age ~ ", ac.var, sep = "")
+  fit_age <- anova(lm(formula.age, data = analysis_data2))
+  p_age <- round_pvalues(fit_age$`Pr(>F)`[1])
+  age.index <- which(rownames(table1_ac3mo) == "Mean ± SD")
+  summary_table_name[["p"]][age.index] <- p_age
+  
+  
+  # add p-values to the following variables using analysis_data2
+  vars_to_test <- rbind(
+    c("age_cat", "Age category"),
+    c("male", "Sex"),
+    c("surgery", "Surgery"),
+    c("hospitalized", "Hospitalized"),
+    c("smoke", "Smoking"),
+    c("hemoglobin", "Hemoglobin"),
+    c("platelet", "Platelet"),
+    c("gfr", "GFR"),
+    c("vte_history", "History of VTE (ICD 9: V12.51)"),
+    c("cancer_type_combined", "Malignancy"),
+    c("index_vte_type", "Index VTE Type")
+  )
+  
+  for(j in 1:nrow(vars_to_test)){
+    summary_table_name <- add_p_catVar(data = analysis_data2,
+                         summary_table = summary_table_name,
+                         row.variable = vars_to_test[j, 1], 
+                         col.variable = ac.var, 
+                         table_rowname = vars_to_test[j, 2])
+  }
+  
+  
+  # add p-values to the variables using other data
+  summary_table_name <- add_p_catVar(data = antiplainfo2, summary_table = summary_table_name,
+                               row.variable = "antiplatelet", col.variable = ac.var, 
+                               table_rowname = "Antiplatelets")
+  
+  summary_table_name <- add_p_catVar(data = comorbinfo2, summary_table = summary_table_name,
+                               row.variable = "comorbidities", col.variable = ac.var, 
+                               table_rowname = "Charlson Co-morbidity index")
+  
+  return(summary_table_name)
+}
 
 
-
-
+table1_ac3mo <- add_p_to_AC("ac3mo2", table1_ac3mo)
+table1_ac4mo <- add_p_to_AC("ac4mo2", table1_ac4mo)
 
 
 # COMBINE THE COUNTS
 gap_col <- as.matrix(rep(NA, nrow(table1_ac3mo)), ncol=1)
 colnames(gap_col)[1] <- "Left: AC3Mo; \n Right: AC4Mo"
 table1 <- cbind(table1_ac3mo, gap_col, table1_ac4mo)
-
-
-
 
 
 # SAVE TO EXCEL
@@ -283,10 +356,11 @@ saveWorkbook(wb, "../data/summary_stats.xlsx")
 
 print("Average comorbidity score"); 
 s <- analysis_data2 %>% group_by(ac3mo2) %>%
-  summarise("Average comorbidity score "=mean(charlson_comorb_score))
+  summarise("Average comorbidity score " = mean(charlson_comorb_score))
 print(s)
 
-
+fit_comorb_score <- anova(lm(charlson_comorb_score ~ ac3mo2, data = analysis_data2))
+fit_comorb_score
 
 
 
