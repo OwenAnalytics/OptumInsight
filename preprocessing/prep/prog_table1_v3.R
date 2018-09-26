@@ -38,6 +38,7 @@ library(reshape2)
 library(survival)
 library(data.table)
 library(MASS)
+options(knitr.kable.NA = '')
 
 add_wb <- function(sheetnm, data, rownm = FALSE){
   removeSheet(wb, sheetName=sheetnm) # replace with new data frame
@@ -336,6 +337,9 @@ add_p_to_AC <- function(ac.var, summary_table_name){
 
 table1_ac3mo <- add_p_to_AC("ac3mo2", table1_ac3mo)
 table1_ac4mo <- add_p_to_AC("ac4mo2", table1_ac4mo)
+
+# kable(table1_ac3mo) %>%
+#   kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
 
 
 # COMBINE THE COUNTS

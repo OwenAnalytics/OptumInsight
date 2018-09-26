@@ -33,21 +33,21 @@ Categories of some variables are combined, due to small cell counts which causes
 
 Here is description of variables used in the model:
 
-- **VTE_VTEName**: binary indicators of whether a patient has a particular VTE type (VTEName) in index\_vte\_type. It is derived from variable index\_vte\_type. Due to small counts of "IVC", "RV" and "PV", these three categories are combined into "ivc_rv_pv". Hence there are five such binary columns: "VTE_Lower.extremity.DVT", "VTE_Other", "VTE_Pulmonary.embolism", "VTE_Upper.extremity.DVT", and "VTE_ivc_rv_pv". For example, "VTE_Lower.extremity.DVT" = 1 if a patient has LE as one of index VTE types. This coding allows for multiple index VTE types.
+- **VTE: VTE Name **: binary indicators of whether a patient has a particular VTE type (VTE Name) in index\_vte\_type. It is derived from variable index\_vte\_type. Due to small counts of "IVC", "RV" and "PV", these three categories are combined into "ivc_rv_pv". Hence there are five such binary columns: "VTE: Lower extremity DVT", "VTE: Other", "VTE: Pulmonary embolism", "VTE: Upper extremity DVT", and "VTE: IVC or RV or PV". For example, "VTE: Lower extremity DVT" = 1 if a patient has LE as one of index VTE types. This coding allows for multiple index VTE types.
 
-- **vte\_history**: = 1 if a patient has history of VTE (ICD-9 code V12.51) within 12 months prior to index VTE date, and 0 if not.
+- **VTE history**: = 1 if a patient has history of VTE (ICD-9 code V12.51) within 12 months prior to index VTE date, and 0 if not.
 
-- **Hospitalized**: = 1 if a patient was hospitalized within 28 days prior to index VTE date, and 0 if not.
+- **Hospital admission**: = 1 if a patient was hospitalized within 28 days prior to index VTE date, and 0 if not.
 
-- **malignancy_cancerName**: binary indicators of whether a patient has a particular cancer (cancerName) in malignancy. It is derived from cancer\_type. There are 8 malignancy types: Brain.CNS, Breast, Gastrointestinal, Genitourinary, Gynecologic, Hematologic, Lung, and Other. Example: malignancy_Brain.CNS = 1 if brain/CNS is one of the patient's index cancer types, and 0 if not. Malignancies follow the categorization in sheet "Table 1 Cleaned for Abstract" in "Optum Table 1 and 2 w regression 7-26-18.xlsx". This coding allows for multiple malignancies.
+- **Malignancy: cancerName**: binary indicators of whether a patient has a particular cancer (cancerName) in malignancy. It is derived from cancer\_type. There are 8 malignancy types: Brain.CNS, Breast, Gastrointestinal, Genitourinary, Gynecologic, Hematologic, Lung, and Other. Example: Malignancy: Brain CNS = 1 if brain/CNS is one of the patient's index cancer types, and 0 if not. Malignancies follow the categorization in sheet "Table 1 Cleaned for Abstract" in "Optum Table 1 and 2 w regression 7-26-18.xlsx". This coding allows for multiple malignancies.
 
-- **charlson_comorb_score**: Charlson comorbidity score.
+- **Charlson comorb score**.
 
 - **Division**: categorical variable with 10 levels. "EAST NORTH CENTRAL" is the reference level.
 
-- **Education2**: categorical variable. Due to small count in the category "Less than 12th Grade" ("A"), it is merged with level "High School Diploma" ("B") into in to a new level coded as "AB". **Education2** has four levels "AB", "C", "D", and "U", where "<Bachelor degree" ("C") is the reference level.
+- **Education: educationLevel**: categorical variable. Due to small count in the category "Less than 12th Grade" ("A"), it is merged with level "High School Diploma" ("B") into in to a new level coded as "Education: High school diploma or less". **Education** has four levels "High school diploma or less", "Education: Bachelor degree plus", "<Bachelor degree"(reference level), and "Education: Unknown".
 
-- **Income\_range**: categorical variable with 7 levels "0", ..., "6". "6" is the reference level.
+- **Income: range**: categorical variable with 7 levels "Income: Unknown", "Income: <40K", "Income: 40K-49K", "Income: 50K-59K", "Income: 60K-74K", "Income: 75K-99K", and "$100K+" (reference level).
 
 <!--
 - **ac3mo_copay_rng**: categorical variable with 7 levels [0, 10), [10, 30), [30, 50), [50, 100), [100, 250), [250, 500), and >= 500. The "Undefined" level is dropped because it only exists for Multiple/Unknown. "[0, 10)" is the reference level.
@@ -55,14 +55,11 @@ Here is description of variables used in the model:
 - **Product**: categorical variable with 6 levels. "HMO" is the referene level.
 -->
 
-- **Age\_s**: continuous variable. Scaled age, defined as (age - mean of age) / standard deviation of age. 
-
-- **Race**: categorical variable. It has levels "A", "B", "H", "W", and "U", where "W" (white) is the reference level.
+- **Age (scaled)**: continuous variable. Scaled age, defined as (age - mean of age) / standard deviation of age. 
 
 - **Male**: = 1 if a patient is male, and 0 if female.
 
-
-
+- **Race**: categorical variable. It has levels "Asian", "Black", "Hispanic", "White" (reference level), and "Unknown".
 
 
 ```{r setup, include=FALSE}
@@ -79,6 +76,7 @@ library(xlsx)
 library(readxl)
 library(mlogit)
 library(nnet)
+library(stargazer)
 ```
 
 
@@ -221,17 +219,191 @@ $\log{ \left( \frac{P(\text{AC3Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ vte
 ```{r echo=FALSE}
 fm.ac3mo <- as.formula(paste("ac3mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
 fit.ac3mo <- multinom(fm.ac3mo, data=data_ac3mo, trace=FALSE)
-create_coefficients_table(fit.ac3mo, "")
+# create_coefficients_table(fit.ac3mo, "")
 ```
 
 
+```{r echo=FALSE}
+fm.ac4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
+fit.ac4mo <- multinom(fm.ac4mo, data=data_ac4mo, trace=FALSE)
+```
+
+<!--
+AC3mo and AC 4mo are separate tables
+-->
+```{r echo=FALSE, results='asis'}
+stargazer(fit.ac3mo, type = "html",
+          # out = "fit_multinom_logit_3mo.htm",
+          align = TRUE,
+          title = "Multinomial logistic regression results on anticoagulant at 3 months",
+          column.labels = c("AC at 3 Months"),
+          dep.var.labels = rep(c("DOAC", "Unknown/Multiple", "Warfarin")),
+          ci=TRUE, ci.level=0.95,
+          covariate.labels = c("VTE: Lower extremity DVT ",
+                               "VTE: Other",
+                               "VTE: Pulmonary embolism",
+                               "VTE: Upper extremity DVT",
+                               "VTE: IVC or RV or PV",
+                               "VTE history",
+                               "Hospital admission",
+                               "Malignancy: Brain CNS",
+                               "Malignancy: Breast",
+                               "Malignancy: Gastrointestinal",
+                               "Malignancy: Genitourinary",
+                               "Malignancy: Gynecololgic",
+                               "Malignancy: Hematologic",
+                               "Malignancy: Lung",
+                               "Malignancy: Other",
+                               "Charlson comorb score",
+                               "Division: East south central",
+                               "Division: Middle Atlantic",
+                               "Division: Mountain",
+                               "Division: New England",
+                               "Division: Pacific",
+                               "Division: South Atlantic",
+                               "Division: Unknown",
+                               "Division: West North Central",
+                               "Division: West South Central",
+                               "Education: High school diploma or less",
+                               "Education: Bachelor degree plus",
+                               "Education: Unknown",
+                               "Income: Unknown",
+                               "Income: <$40K",
+                               "Income: $40K-$49K",
+                               "Income: $50K-$59K",
+                               "Income: $60K-$74K",
+                               "Income: $75K-$99K",
+                               "Age (scaled)<sup>1</sup>",
+                               "Male",
+                               "Race: Asian",
+                               "Race: Black",
+                               "Race: Hispanic",
+                               "Race: Unknown"),
+          add.lines=list(c("Note 1: age is scaled by substracting average age, </br> and then dividing by standard deviation.", "", "")),
+          no.space = TRUE)
+```
+
+
+<!--
+AC4mo table
+-->
+### Sentivity analysis at 4 months
+```{r, echo=FALSE, results='asis'}
+stargazer(fit.ac4mo, type = "html",
+          # out = "fit_multinom_logit_4mo.htm", 
+          align = TRUE,
+          title = "Multinomial logistic regression results on anticoagulant at 4 months",
+          column.labels = c("AC at 4 Months"),
+          dep.var.labels = rep(c("DOAC", "Unknown/Multiple", "Warfarin")),
+          ci=TRUE, ci.level=0.95,
+          covariate.labels = c("VTE: Lower extremity DVT ",
+                               "VTE: Other",
+                               "VTE: Pulmonary embolism",
+                               "VTE: Upper extremity DVT",
+                               "VTE: IVC or RV or PV",
+                               "VTE history",
+                               "Hospital admission",
+                               "Malignancy: Brain CNS",
+                               "Malignancy: Breast",
+                               "Malignancy: Gastrointestinal",
+                               "Malignancy: Genitourinary",
+                               "Malignancy: Gynecololgic",
+                               "Malignancy: Hematologic",
+                               "Malignancy: Lung",
+                               "Malignancy: Other",
+                               "Charlson comorb score",
+                               "Division: East south central",
+                               "Division: Middle Atlantic",
+                               "Division: Mountain",
+                               "Division: New England",
+                               "Division: Pacific",
+                               "Division: South Atlantic",
+                               "Division: Unknown",
+                               "Division: West North Central",
+                               "Division: West South Central",
+                               "Education: High school diploma or less",
+                               "Education: Bachelor degree plus",
+                               "Education: Unknown",
+                               "Income: Unknown",
+                               "Income: <$40K",
+                               "Income: $40K-$49K",
+                               "Income: $50K-$59K",
+                               "Income: $60K-$74K",
+                               "Income: $75K-$99K",
+                               "Age (scaled)<sup>1</sup>",
+                               "Male",
+                               "Race: Asian",
+                               "Race: Black",
+                               "Race: Hispanic",
+                               "Race: Unknown"),
+          add.lines=list(c("Note 1: age is scaled by substracting average age, </br> and then dividing by standard deviation.", "", "")),
+          no.space = TRUE)
+```
+
+
+
+<!--
+AC3mo and AC 4mo are put together
+-->
+```{r echo=FALSE, eval=FALSE}
+stargazer(fit.ac3mo, fit.ac4mo, type = "html",
+          out = "fit_multinom_logit.htm", align = TRUE,
+          title = "Multinomial logistic regression results on anticoagulant and 95% confidence intervals",
+          column.labels = c("AC at 3 Months", "AC at 4 Months"),
+          column.separate = c(3, 3),
+          dep.var.labels = rep(c("DOAC", "Unknown/Multiple", "Warfarin"), 2),
+          ci=TRUE, ci.level=0.95,
+          covariate.labels = c("VTE: Lower extremity DVT",
+                               "VTE: Other",
+                               "VTE: Pulmonary embolism",
+                               "VTE: Upper extremity DVT",
+                               "VTE: IVC or RV or PV",
+                               "VTE history",
+                               "Hospital admission",
+                               "Malignancy: Brain CNS",
+                               "Malignancy: Breast",
+                               "Malignancy: Gastrointestinal",
+                               "Malignancy: Genitourinary",
+                               "Malignancy: Gynecololgic",
+                               "Malignancy: Hematologic",
+                               "Malignancy: Lung",
+                               "Malignancy: Other",
+                               "Charlson comorb score",
+                               "Division: East south central",
+                               "Division: Middle Atlantic",
+                               "Division: Mountain",
+                               "Division: New England",
+                               "Division: Pacific",
+                               "Division: South Atlantic",
+                               "Division: Unknown",
+                               "Division: West North Central",
+                               "Division: West South Central",
+                               "Education: High school diploma or less",
+                               "Education: Bachelor degree plus",
+                               "Education: Unknown",
+                               "Income: Unknown",
+                               "Income: <$40K",
+                               "Income: $40K-$49K",
+                               "Income: $50K-$59K",
+                               "Income: $60K-$74K",
+                               "Income: $75K-$99K",
+                               "Age (scaled)<sup>1</sup>",
+                               "Male",
+                               "Race: Asian",
+                               "Race: Black",
+                               "Race: Hispanic",
+                               "Race: Unknown"),
+          add.lines=list(c("Note 1: age is scaled by substracting average age, </br> and then dividing by standard deviation.", "", "")),
+          no.space = TRUE)
+```
+
+
+<!--
 **Notes on interpreting the results**
 
-We focus on the largest model, Model 4.
+- An example of interpreting the coefficients: The exponentiated coefficient of "VTE: Lower extremity DVT " for warfarin is $e^{0.175} = 1.191$. This means that the probability of AC3Mo being warfarin is 1.191 times the probability of AC3Mo being LMWH for a patient with LE as index VTE type, holding all other covariates constant.
 
-- An example of interpreting the coefficients: The exponentiated coefficient of "VTE_Lower.extremity.DVT" for warfarin is 1.231. This means that the probability of AC3Mo being warfarin is 1.231 times the probability of AC3Mo being LMWH for a patient with LE as index VTE type, holding all other covariates constant.
-
-- The model considers multiple index VTE types and multiple malignancies. For example, Let's consider a multiple VTE types case. The exponentiated coefficient of "VTE_Pulmonary.embolism" for warfarin is 0.834. Along with 1.231 from the previous point, the probability of AC3Mo being warfarin is 1.231\*0.834 = 1.027 times the probability of AC3Mo being LMWH for a patient with both LE and PE, holding all other covariates constant.
+- The model considers multiple index VTE types and multiple malignancies. For example, The exponentiated coefficient of "VTE_Pulmonary.embolism" for warfarin is 0.834. Along with 1.231 from the previous point, the probability of AC3Mo being warfarin is 1.231\*0.834 = 1.027 times the probability of AC3Mo being LMWH for a patient with both LE and PE, holding all other covariates constant.
 
 - Controlling for all other covariates, having any index VTE types decreases the relative probability of AC3Mo being DOAC compared to LMWH because all coefficients of DOAC are negative. In addition, having any of PE, UE, or ivc_rv_pv lowers the relative probability of AC3Mo being Warfarin compared to LMWH. For example,
 for a patient with PE and UE simutaneously, the probability of AC3Mo being DOAC is 0.834\*0.915 = 0.763 times that being LMWH. Similarly, for a patient with the same condition, the probability of AC3Mo being warfarin is 0.88\*0.918 = 0.808 times that being LMWH.
@@ -251,41 +423,9 @@ for a patient with PE and UE simutaneously, the probability of AC3Mo being DOAC 
 - Compared to patients in household income level \$100K+, having any other household income levels increases the relative probability of AC3Mo being Warfarin compared to LMWH because all coefficients for Warfarin are positive. On the other hand, having any other household income levels does not seem to change much the relative probability of AC3Mo being DOAC compared to LMWH because all coefficients are close to 0, no matter positive or negative.
 
 
+-->
 
 
-
-# Multinomial logistic regression on AC at 4 months
-### Model:  
-$\log{ \left( \frac{P(\text{AC4Mo = j})}{P(\text{AC3Mo = LMWH})} \right)} =$ vte\_VTENames + vte\_history + hospitalized + malignancy + charlson_comorb_score + division + education2 + income\_range + ac3mo\_copay\_range + product + age\_s + male + race, where $j$ can be "Warfarin", "DOAC", "Unknown/Multiple".
-
-```{r echo=FALSE}
-fm.ac4mo <- as.formula(paste("ac4mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
-fit.ac4mo <- multinom(fm.ac4mo, data=data_ac4mo, trace=FALSE)
-create_coefficients_table(fit.ac4mo, "")
-```
-
-
-
-
-
-
-
-```{r echo=FALSE, eval=FALSE}
-# running ANOVA to compare mean ages across groups
-fit_age <- aov(age ~ ac3mo2, data=data_ac3mo)
-s.fit_age <- summary(fit_age)
-s.fit_age$`Pr(>F)`
-
-fit_age.anova <- anova(lm(age ~ ac3mo2, data=data_ac3mo))
-s.fit_age <- summary(fit_age)
-
-# running ANOVA to compare sex proportions across groups
-fit_sex <- aov(male ~ ac3mo2, data=data_ac3mo)
-summary(fit_sex)
-
-
-summary(fit.age_cat <- glm(age_cat ~ ac3mo2, family = "poisson", data = data_ac3mo))
-```
 
 
 
