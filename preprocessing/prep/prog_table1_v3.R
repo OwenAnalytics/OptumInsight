@@ -127,8 +127,13 @@ table1_tab <- function(data, rowvar, colvar, rownm, titleRow){
 
 
 round_pvalues <- function(x){
-  if (x < 0.0001) return("<0.0001") else if (0.0001 <= x & x < 0.001)
-    return("<0.001") else if (0.001 <= x) return(round(x, 3))
+  if (x < 0.001) {
+    return("<0.001 ***")
+  } else if (0.001 <= x & x < 0.01) {
+    return("<0.01 **")
+  } else if (0.01 <= x & x < 0.05) { 
+    return(paste(round(x, 3), "*"))
+  } else return(round(x, 3))
 }
 
 
@@ -280,12 +285,12 @@ add_p_catVar <- function(data, summary_table, row.variable, col.variable, table_
 }
 
 
-add_p_to_AC <- function(ac.var, summary_table_name){
+add_p_to_AC <- function(data, ac.var, summary_table_name){
   # initialize p-value column
   summary_table_name[["p"]] <- NA
   
   # add p-value of overall counts
-  overall <- table(analysis_data2[[ac.var]])
+  overall <- table(data[[ac.var]])
   p_overall <- round_pvalues(chisq.test(overall)$p.value)
   overall.index <- which(rownames(summary_table_name) == "Overall Counts (Row %)")
   summary_table_name[["p"]][overall.index] <- p_overall
@@ -335,11 +340,19 @@ add_p_to_AC <- function(ac.var, summary_table_name){
 }
 
 
-table1_ac3mo <- add_p_to_AC("ac3mo2", table1_ac3mo)
-table1_ac4mo <- add_p_to_AC("ac4mo2", table1_ac4mo)
+# remove people who have Other AC
+data_ac3mo <- analysis_data2 %>%
+  filter(!ac3mo %in% c("Other", "Not captured"))
+data_ac3mo$ac3mo2 <- factor(data_ac3mo$ac3mo2)
 
-# kable(table1_ac3mo) %>%
-#   kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
+data_ac4mo <- analysis_data2 %>%
+  filter(!ac4mo %in% c("Other", "Not captured"))
+data_ac4mo$ac4mo2 <- factor(data_ac4mo$ac4mo2)
+
+
+table1_ac3mo <- add_p_to_AC(data = data_ac3mo, "ac3mo2", table1_ac3mo)
+table1_ac4mo <- add_p_to_AC(data = data_ac4mo, "ac4mo2", table1_ac4mo)
+
 
 
 # COMBINE THE COUNTS
