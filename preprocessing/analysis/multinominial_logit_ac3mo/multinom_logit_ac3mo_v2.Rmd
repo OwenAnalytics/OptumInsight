@@ -277,28 +277,6 @@ create_coefficients_table(fit.ac4mo, "")
 
 
 
-```{r echo=FALSE, eval=FALSE}
-# running ANOVA to compare mean ages across groups
-fit_age <- aov(age ~ ac3mo2, data=data_ac3mo)
-s.fit_age <- summary(fit_age)
-s.fit_age$`Pr(>F)`
-
-fit_age.anova <- anova(lm(age ~ ac3mo2, data=data_ac3mo))
-s.fit_age <- summary(fit_age)
-
-# running ANOVA to compare sex proportions across groups
-fit_sex <- aov(male ~ ac3mo2, data=data_ac3mo)
-summary(fit_sex)
-
-
-summary(fit.age_cat <- glm(age_cat ~ ac3mo2, family = "poisson", data = data_ac3mo))
-```
-
-
-
-
-
-
 
 
 

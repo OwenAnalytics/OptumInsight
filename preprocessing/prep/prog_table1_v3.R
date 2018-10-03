@@ -130,7 +130,7 @@ round_pvalues <- function(x){
   if (x < 0.001) {
     return("<0.001 ***")
   } else if (0.001 <= x & x < 0.01) {
-    return("<0.01 **")
+    return(paste(round(x, 3), "**"))
   } else if (0.01 <= x & x < 0.05) { 
     return(paste(round(x, 3), "*"))
   } else return(round(x, 3))
@@ -278,7 +278,7 @@ add_p_catVar <- function(data, summary_table, row.variable, col.variable, table_
   tab <- array(table(data[[row.variable]], data[[col.variable]]),
                c(nlevels_row, nlevels_col))
   fit <- loglm(~ 1 + 2, tab)
-  p_var <- round_pvalues(1 - pchisq(fit$lrt, fit$df))
+  p_var <- round_pvalues(1 - pchisq(fit$pearson, fit$df))
   row.index <- which(rownames(summary_table) == table_rowname)
   summary_table$p[row.index] <- p_var
   return(summary_table)
@@ -319,7 +319,7 @@ add_p_to_AC <- function(data, ac.var, summary_table_name){
   )
   
   for(j in 1:nrow(vars_to_test)){
-    summary_table_name <- add_p_catVar(data = analysis_data2,
+    summary_table_name <- add_p_catVar(data = data,
                          summary_table = summary_table_name,
                          row.variable = vars_to_test[j, 1], 
                          col.variable = ac.var, 
@@ -328,11 +328,13 @@ add_p_to_AC <- function(data, ac.var, summary_table_name){
   
   
   # add p-values to the variables using other data
-  summary_table_name <- add_p_catVar(data = antiplainfo2, summary_table = summary_table_name,
+  summary_table_name <- add_p_catVar(data = antiplainfo2,
+                               summary_table = summary_table_name,
                                row.variable = "antiplatelet", col.variable = ac.var, 
                                table_rowname = "Antiplatelets")
   
-  summary_table_name <- add_p_catVar(data = comorbinfo2, summary_table = summary_table_name,
+  summary_table_name <- add_p_catVar(data = comorbinfo2,
+                               summary_table = summary_table_name,
                                row.variable = "comorbidities", col.variable = ac.var, 
                                table_rowname = "Charlson Co-morbidity index")
   
@@ -342,11 +344,11 @@ add_p_to_AC <- function(data, ac.var, summary_table_name){
 
 # remove people who have Other AC
 data_ac3mo <- analysis_data2 %>%
-  filter(!ac3mo %in% c("Other", "Not captured"))
+  filter(!ac3mo2 %in% c("Other/Unknown/Multiple", "Not captured"))
 data_ac3mo$ac3mo2 <- factor(data_ac3mo$ac3mo2)
 
 data_ac4mo <- analysis_data2 %>%
-  filter(!ac4mo %in% c("Other", "Not captured"))
+  filter(!ac4mo2 %in% c("Other/Unknown/Multiple", "Not captured"))
 data_ac4mo$ac4mo2 <- factor(data_ac4mo$ac4mo2)
 
 
@@ -381,4 +383,31 @@ fit_comorb_score
 
 
 
+
+## TEST CODES -------------------------------------------- 
+
+# running ANOVA to compare mean ages across groups
+# fit_age.anova <- anova(lm(age ~ ac3mo2, data=data_ac3mo))
+# s.fit_age <- summary(fit_age)
+# 
+# # same as above
+# # fit_age <- aov(age ~ ac3mo2, data=data_ac3mo)
+# # s.fit_age <- summary(fit_age)
+# 
+# # running ANOVA to compare sex proportions across groups
+# fit_sex <- aov(male ~ ac3mo2, data=data_ac3mo)
+# summary(fit_sex)
+# 
+# # run chi square test on sex
+# sex_table <- table(data_ac3mo[["male"]], data_ac3mo[["ac3mo2"]])
+# chisq.test(sex_table)
+# 
+# 
+# # run chi square test on sex
+# agecat_table <- table(data_ac3mo[["age_cat"]], data_ac3mo[["ac3mo2"]])
+# chisq.test(agecat_table)
+# 
+# 
+# summary(fit.age_cat <- glm(age_cat ~ ac3mo2, family = "binomial", data = data_ac3mo))
+# 
 

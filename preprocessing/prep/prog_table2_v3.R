@@ -1,5 +1,5 @@
 #######################################################################################
-# THIS PROGRAM CALCULATE TABLE 2 STATISTICS.                                          #
+# THIS PROGRAM CALCULATE TABLE 2 STATISTICS.                                          
 #' 1. EDUCATION LEVEL
 #' 2. FEDERAL POVERTY STATUS
 #' 3. HOME OWNERSHIP
@@ -111,7 +111,7 @@ round_pvalues <- function(x){
   if (x < 0.001) {
     return("<0.001 ***")
   } else if (0.001 <= x & x < 0.01) {
-    return("<0.01 **")
+    return(paste(round(x, 3), "**"))
   } else if (0.01 <= x & x < 0.05) { 
     return(paste(round(x, 3), "*"))
   } else return(round(x, 3))
@@ -204,7 +204,7 @@ add_p_catVar <- function(data, summary_table, row.variable, col.variable, table_
   tab <- array(table(data[[row.variable]], data[[col.variable]]),
                c(nlevels_row, nlevels_col))
   fit <- loglm(~ 1 + 2, tab)
-  p_var <- round_pvalues(1 - pchisq(fit$lrt, fit$df))
+  p_var <- round_pvalues(1 - pchisq(fit$pearson, fit$df))
   row.index <- which(rownames(summary_table) == table_rowname)
   summary_table$p[row.index] <- p_var
   return(summary_table)
@@ -243,11 +243,11 @@ add_p_to_AC <- function(data, ac.var, summary_table_name){
 
 # remove people who have Other AC
 data_ac3mo <- analysis_data2 %>%
-  filter(!ac3mo %in% c("Other", "Not captured"))
+  filter(!ac3mo2 %in% c("Other/Unknown/Multiple", "Not captured"))
 data_ac3mo$ac3mo2 <- factor(data_ac3mo$ac3mo2)
 
 data_ac4mo <- analysis_data2 %>%
-  filter(!ac4mo %in% c("Other", "Not captured"))
+  filter(!ac4mo2 %in% c("Other/Unknown/Multiple", "Not captured"))
 data_ac4mo$ac4mo2 <- factor(data_ac4mo$ac4mo2)
 
 
