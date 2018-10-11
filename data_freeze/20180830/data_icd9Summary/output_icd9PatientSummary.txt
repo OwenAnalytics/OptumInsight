@@ -1,0 +1,21 @@
+[1] "frequency of ICD-9 codes with 3 digits"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1    6272   19707   43680   52578  351883 
+[1] "10 most frequent 3-digit ICD-9 codes"
+
+   V58    453    401    162    174    786    285    780    250    415 
+351883 161129 149904 114119 110600 102379  99843  99547  97719  97372 
+[1] "frequency of ICD-9 codes with 4 digits"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1    1319    5438   15944   16498  180615 
+[1] "10 most frequent 4-digit ICD-9 codes"
+
+  V586   4019   4534   4151   V581   2500   1629   1749   4273   7860 
+180615 115372  99856  96878  87222  79969  78612  74104  69379  54722 
+[1] "frequency of ICD-9 codes with 5 digits"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1     688    2721   10023    9503  133181 
+[1] "10 most frequent 5-digit ICD-9 codes"
+
+ V5861  41519  V5811  45340  25000  42731  20300  V5869  78605  72887 
+133181  90213  79332  70012  67573  65850  41231  36894  34940  34203 
