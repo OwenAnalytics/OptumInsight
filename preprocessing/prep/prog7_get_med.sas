@@ -38,7 +38,7 @@ quit;
 
 %macro create_med(yr=);
 	select strip(put(patid2,20.)) as patid, *
-	from medical.med_dvt_&yr(keep=patid conf_id copay diag1-diag25 fst_dt lst_dt pos proc_cd prov rename=(patid=patid2)) 
+	from medical.med_dvt_&yr(keep=patid conf_id charge coins copay deduct diag1-diag25 fst_dt lst_dt pos proc_cd prov rename=(patid=patid2)) 
 	where (calculated patid in (select distinct patid from patids))
 %mend;
 

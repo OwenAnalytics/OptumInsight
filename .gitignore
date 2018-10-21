@@ -13,13 +13,11 @@ preprocessing/prep/tasks_prep.bat
 preprocessing/**/*.bat
 preprocessing/**/*.txt
 preprocessing/**/*.rds
-preprocessing/subsetting/subset_3_removeNoACPeriod_multipleCancers.xlsx
+preprocessing/subsetting/*.xlsx
+preprocessing/data_wrangling*
 
 data_freeze/**/*.csv
 data_freeze/20180830/separateData/
-
-preprocessing/data_wrangling*
-
-
-data_freeze/20180830/*.rds
-data_freeze/20180830/*.txt
+data_freeze/20181020/separateData/
+data_freeze/20181020/**/*.txt
+data_freeze/20181020/**/*.csv
