@@ -8,6 +8,9 @@
 #' 
 #' Created: 10/17/2018
 #' 
+#' Revisions: 10/21/2018 - Revise top-down structure of 
+#' decreasing probability. Add temporal correlation.
+#' 
 ##################################################
 
 library(plyr)
@@ -33,13 +36,13 @@ prob <- prob / sum(prob)
 
 # create diagnosis data
 N <- 5000 # sample size
-n <- 4000 # number of diagnosis codes
+n <- 1 # number of diagnosis codes
 mydata <- data.frame(matrix(NA, nrow = N, ncol = n))
 colnames(mydata) <- paste0("code", 1:n)
 
 # assume that trees are independent for simplicity
 for(j in 1:N){
-  sampled <- mytree[sample(nrow(mytree), n/10, replace = TRUE, prob = prob), ]
+  sampled <- mytree[sample(nrow(mytree), ceiling(n/10), replace = TRUE, prob = prob), ]
   mydata[j, ] <- as.vector(t(sampled))
 }
 

@@ -10,17 +10,21 @@
 #' 
 #' Created: 10/15/2018 - Convert long format to wide format,
 #'     one day per row, including diagnoses, procedures, labs etc
-#'     performed on that day
+#'     performed on that day.
+#'  10/21/2018 - Separate diagnoses and proc_cd into two 
+#'     different data sets. The duplicacy and incompatibility of proc_cd
+#'     from facility claims and proc_cd from medical or confinement 
+#'     claims make the two information hard to combine.
 ##################################################
 
 library(data.table)
 library(reshape2)
 library(xlsx)
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_combineData")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_combineData/combineData_wide")
 
 ## read in medical claims data --------------------------------------------------
-medical <- fread("../separateData/medicalClaims.txt",
+medical <- fread("../../separateData/medicalClaims.txt",
                  select = c("patid", "Conf_Id", "Copay", paste0("Diag", 1:25),
                             "Fst_Dt", "Lst_Dt", "Proc_Cd", "Pos"),
                  colClasses = list(character=c("patid", "Conf_Id", 
@@ -48,7 +52,7 @@ medical$proc_cd <- with(medical, ifelse(proc_cd < "00100", NA, proc_cd))
 
 
 ### read in confinement data -------------------------------------------
-confinement <- fread("../separateData/confinementClaims.txt",
+confinement <- fread("../../separateData/confinementClaims.txt",
                      colClasses = list(character = c("patid")))
 colnames(confinement) <- tolower(colnames(confinement))
 
@@ -81,20 +85,14 @@ colnames(confinement)[which(colnames(confinement) == "diag1")] <- "diag1_1"
 
 
 ## read in pos details -------------------------------------------------
-pos_detail <- read.xlsx("../separateData/All_codes_ICD9_NDC_HCPCS.xlsx",
+pos_detail <- read.xlsx("../../separateData/All_codes_ICD9_NDC_HCPCS.xlsx",
                         sheetName = "POS", header = TRUE)
 colnames(pos_detail) <- tolower(colnames(pos_detail))
 pos_detail$pos <- as.character(pos_detail$pos)
 
 
-
-## read in anticoagulant claims data --------------------------------------------
-
-patinfo <- fread("../separateData/patient_data.txt")
-
-anticoagulant <- patinfo[, .(patid, copay, fill_dt, gen_name, days_sup,
-                             quantity, strength, npi)]
-
+patinfo <- fread("../../separateData/patient_data.txt")
+patinfo <- unique(patinfo[, .(patid, index_dt)])
 
 
 #' The reclass function unifies two data sets:
@@ -154,16 +152,17 @@ group.size <- 500
 x <- seq_along(patids)
 patids.split <- split(patids, ceiling(x/group.size))
 
+
 for(i in 1:length(patids.split)){
   med <- subset(medical, patid %in% patids.split[[i]])
   
   # sum up copays across rows with the same date and diagnoses
   med[, copay_sum := sum(copay), by = c("patid", "fst_dt", "pos")]
   
-  # get proc_cd from medical data
-  # this step is moved here so that medical data can be deleted from memory
-  proc_med <- unique(med[, .(patid, conf_id, fst_dt, lst_dt, proc_cd)])
-  proc_med <- proc_med[is.na(proc_med$proc_cd) == FALSE, ]
+  # # get proc_cd from medical data
+  # # this step is moved here so that medical data can be deleted from memory
+  # proc_med <- unique(med[, .(patid, conf_id, fst_dt, lst_dt, proc_cd)])
+  # proc_med <- proc_med[is.na(proc_med$proc_cd) == FALSE, ]
   
   # rm(medical, data1)
   
@@ -216,7 +215,7 @@ for(i in 1:length(patids.split)){
   rm(medical_diag_long)
   
   medical_diagX_long$diag <- paste0("diag", rowidv(medical_diagX_long,
-               cols = c("patid", "fst_dt", "lst_dt", "conf_id", "pos", "copay_sum"))+1)
+          cols = c("patid", "fst_dt", "lst_dt", "conf_id", "pos", "copay_sum"))+1)
   
   # transform from long to wide
   medical_diagX <- dcast(setDT(medical_diagX_long),
@@ -273,91 +272,258 @@ for(i in 1:length(patids.split)){
                      by = "pos", all.x = TRUE)
   
   rm(med_conf, confinement.split)
-  
-  
-  ## deal with proc_cd -----------------------------------------------
-  
-  # transform from long to wide
-  proc_med_wide <- dcast(setDT(proc_med),
-                         patid + conf_id + fst_dt + lst_dt~
-                           rowid(patid, conf_id, fst_dt, lst_dt, prefix = "proc_cd"),
-                         value.var = "proc_cd")
-  
-  rm(proc_med)
-  
-  # re-order columns
-  proc_names <- grep("proc_cd", colnames(proc_med_wide), value = TRUE)
-  proc_names_order <- paste0("proc_cd", 1:length(proc_names))
-  colum_order <- c("patid", "conf_id", "fst_dt", "lst_dt", proc_names_order)
-  proc_med_wide <- proc_med_wide[, colum_order]
-  
-  
-  # add proc_cd to diagnosis data
-  med_conf3 <- merge(x = med_conf2,
-                     y = proc_med_wide,
-                     by = c("patid", "conf_id", "fst_dt", "lst_dt"),
-                     all.x = TRUE)
-  
-  colnames(med_conf3)[which(colnames(med_conf3) == "copay_sum")] <- "copay"
-  
-  rm(med_conf2)
-  
-  
-  
-  # change columns to match those of med_conf
-  anticoagulant.split <- anticoagulant[patid %in% patids.split[[i]], ]
-  colnames(anticoagulant.split)[which(colnames(anticoagulant.split) == "fill_dt")] <- "fst_dt"
-  
-  anticoagulant.split$source <- "anticoagulant.outpatient"
-  
-  med_conf_ac <- merge(x = med_conf3,
-                       y = anticoagulant.split,
-                       by = c("patid", "fst_dt", "copay", "source"),
-                       all = TRUE)
-  
-  rm(med_conf3)
+  colnames(med_conf2)[which(colnames(med_conf2) == "copay_sum")] <- "copay"
   
   
   ### Add index VTE dates ------------------------------------------------------
   pat_indexDt <- unique(patinfo[patid %in% patids.split[[i]], .(patid, index_dt)])
-  med_conf_ac <- merge(x = med_conf_ac,
+  med_conf2 <- merge(x = med_conf2,
                        y = pat_indexDt,
                        by = c("patid"), all.x = TRUE)
   
   
-  # change the order of columns
-  column_order <- c("patid", "index_dt", "fst_dt", "lst_dt", "copay", "source", 
-                    "conf_id", "pos", "description", "category",
-                    diag1_names, diagX_names, proc_names_order, 
-                    "gen_name", "days_sup", "quantity", "strength")
-  med_conf_ac <- med_conf_ac[, (column_order), with = FALSE]
-  
   if(i == 1){
-    med_conf_ac2 <- data.table(matrix(NA, nrow = 0,
-                                      ncol = ncol(med_conf_ac)))
-    colnames(med_conf_ac2) <- c(colnames(med_conf_ac))
-    
+    final <- data.table(matrix(NA, nrow = 0, ncol = ncol(med_conf2)))
+    colnames(final) <- c(colnames(med_conf2))
   }
+
+  reclass.out <- reclass(final, med_conf2)
+  final <- reclass.out[[1]]
+  med_conf2 <- reclass.out[[2]]
+
+  final <- rbind(final, med_conf2)
   
-  
-  reclass.out <- reclass(med_conf_ac, med_conf_ac2)
-  med_conf_ac <- reclass.out[[1]]
-  med_conf_ac2 <- reclass.out[[2]]
-  
-  med_conf_ac2 <- rbind(med_conf_ac2, med_conf_ac)
-  
-  rm(med_conf_ac)
+  rm(med_conf2)
 }
 
-# medical[, copay_sum := sum(copay), by = c("patid", "fst_dt", "pos")]
+
+# change the order of columns
+diag_names <- grep("diag", colnames(final), value = TRUE)
+diag1_names <- paste0("diag1_", 1:length(grep("diag1_", diag_names)))
+diagX_names <- paste0("diag", 2:(length(diag_names[! (diag_names %in% diag1_names)])+1))
+column_order <- c("patid", "index_dt", "fst_dt", "lst_dt", "copay", "source", 
+                  "conf_id", "pos", "description", "category",
+                  diag1_names, diagX_names)
+final <- final[, (column_order), with = FALSE]
 
 
-
-
-
-
-write.csv(med_conf_ac, "combinedData_med_conf_ac.csv", 
+write.csv(final, "diagData_20181020_freeze.csv",
           quote = FALSE, row.names=FALSE, na="")
+
+
+
+
+
+
+#' for(i in 1:length(patids.split)){
+#'   med <- subset(medical, patid %in% patids.split[[i]])
+#'   
+#'   # sum up copays across rows with the same date and diagnoses
+#'   med[, copay_sum := sum(copay), by = c("patid", "fst_dt", "pos")]
+#'   
+#'   # # get proc_cd from medical data
+#'   # # this step is moved here so that medical data can be deleted from memory
+#'   # proc_med <- unique(med[, .(patid, conf_id, fst_dt, lst_dt, proc_cd)])
+#'   # proc_med <- proc_med[is.na(proc_med$proc_cd) == FALSE, ]
+#'   
+#'   # rm(medical, data1)
+#'   
+#'   
+#'   ### Dealing with diagnoses from medical data -------------------------------------
+#'   
+#'   # transform diagnoses
+#'   # remove duplicate diagnoses in one day, if all are inpatient or all outpatient
+#'   diag.vars <- c("patid", "conf_id", paste0("diag", 1:25), 
+#'                  "fst_dt", "lst_dt", "copay_sum", "pos")
+#'   medical_diag_long <- melt(med[, (diag.vars), with = FALSE],
+#'                             id.vars = c("patid", "conf_id", "copay_sum", 
+#'                                         "fst_dt", "lst_dt", "pos"),
+#'                             measure.vars = paste0("diag", 1:25),
+#'                             value.name = "icd9_raw",
+#'                             variable.name = "diag",
+#'                             na.rm = TRUE)
+#'   # remove duplicate diagnoses and empty diagnoses
+#'   medical_diag_long <- unique(medical_diag_long)
+#'   
+#'   rm(med)
+#'   
+#'   
+#'   ## Deal with outpatient diagnoses from medical data ---------------
+#'   # inpatient diagnoses will be operated together with confinement data
+#'   
+#'   #' Note that there may be repeated diagX (repeated in X)
+#'   #' If multiple diag1's exist, then separate each into different
+#'   #' columns. If multiple diagX (X >= 2) exist, then renumber
+#'   #' the diagnoses so that one X corresponds to one diagnosis
+#'   
+#'   # deal with diag1
+#'   medical_diag1_long <- medical_diag_long[diag == "diag1", ]
+#'   # medical_diag1_long <- medical_diag1_long[order(
+#'   #   patid, fst_dt, lst_dt, conf_id, pos), ]
+#'   
+#'   # transform from long to wide
+#'   medical_diag1 <- dcast(setDT(medical_diag1_long),
+#'                          patid + conf_id + copay_sum + fst_dt + lst_dt + pos ~
+#'                            rowid(patid, fst_dt, lst_dt, conf_id, pos, copay_sum,
+#'                                  prefix = "diag1_"), 
+#'                          # specify the names of the new variables generated by dcast
+#'                          value.var = "icd9_raw")
+#'   
+#'   rm(medical_diag1_long)
+#'   
+#'   # deal with remaining diagnoses
+#'   medical_diagX_long <- medical_diag_long[diag != "diag1", ]
+#'   
+#'   rm(medical_diag_long)
+#'   
+#'   medical_diagX_long$diag <- paste0("diag", rowidv(medical_diagX_long,
+#'                cols = c("patid", "fst_dt", "lst_dt", "conf_id", "pos", "copay_sum"))+1)
+#'   
+#'   # transform from long to wide
+#'   medical_diagX <- dcast(setDT(medical_diagX_long),
+#'                          patid + conf_id + copay_sum + fst_dt + lst_dt + pos ~ diag, 
+#'                          value.var = "icd9_raw")
+#'   
+#'   rm(medical_diagX_long)
+#'   
+#'   
+#'   # merge all diagnoses
+#'   medical_all <- merge(x = medical_diag1, 
+#'                        y = medical_diagX,
+#'                        by = c("patid", "fst_dt", "lst_dt",
+#'                               "conf_id", "copay_sum", "pos"),
+#'                        all.x = TRUE)
+#'   
+#'   rm(medical_diag1, medical_diagX)
+#'   
+#'   # re-order columns
+#'   diag_names <- grep("diag", colnames(medical_all), value = TRUE)
+#'   
+#'   diag1_names <- paste0("diag1_", 1:length(grep("diag1_", diag_names)))
+#'   diagX_names <- paste0("diag", 2:(length(diag_names[! (diag_names %in% diag1_names)])+1))
+#'   colum_order <- c("patid", "fst_dt", "lst_dt", "conf_id", "copay_sum", "pos",
+#'                    diag1_names, diagX_names)
+#'   medical_all <- medical_all[, colum_order]
+#'   
+#'   # add source variable
+#'   medical_all$source <- ifelse(medical_all$conf_id == "", 
+#'                                "medical.outpatient", "medical.inpatient")
+#'   
+#'   
+#'   ## deal with diagnoses from confinement --------------------------
+#'   confinement.split <- confinement[patid %in% patids.split[[i]], ]
+#'   
+#'   names_in_med_not_conf <- colnames(medical_all)[
+#'     !colnames(medical_all) %in% colnames(confinement.split)]
+#'   
+#'   confinement.split <- confinement.split[, (names_in_med_not_conf) := NA]
+#'   
+#'   # re-order columns
+#'   confinement.split <- confinement.split[, colnames(medical_all), with = FALSE]
+#'   
+#'   med_conf <- rbind(medical_all, confinement.split)
+#'   
+#'   rm(medical_all)
+#'   
+#'   med_conf <- med_conf[order(patid, fst_dt, lst_dt, source), ]
+#'   
+#'   
+#'   ## add pos details -------------------------------------------------
+#'   med_conf2 <- merge(x = med_conf,
+#'                      y = pos_detail,
+#'                      by = "pos", all.x = TRUE)
+#'   
+#'   rm(med_conf, confinement.split)
+#'   colnames(med_conf2)[which(colnames(med_conf2) == "copay_sum")] <- "copay"
+#'   
+#'   # ## deal with proc_cd -----------------------------------------------
+#'   # 
+#'   # # transform from long to wide
+#'   # proc_med_wide <- dcast(setDT(proc_med),
+#'   #                        patid + conf_id + fst_dt + lst_dt~
+#'   #                          rowid(patid, conf_id, fst_dt, lst_dt, prefix = "proc_cd"),
+#'   #                        value.var = "proc_cd")
+#'   # 
+#'   # rm(proc_med)
+#'   # 
+#'   # # re-order columns
+#'   # proc_names <- grep("proc_cd", colnames(proc_med_wide), value = TRUE)
+#'   # proc_names_order <- paste0("proc_cd", 1:length(proc_names))
+#'   # colum_order <- c("patid", "conf_id", "fst_dt", "lst_dt", proc_names_order)
+#'   # proc_med_wide <- proc_med_wide[, colum_order]
+#'   # 
+#'   # 
+#'   # # add proc_cd to diagnosis data
+#'   # med_conf3 <- merge(x = med_conf2,
+#'   #                    y = proc_med_wide,
+#'   #                    by = c("patid", "conf_id", "fst_dt", "lst_dt"),
+#'   #                    all.x = TRUE)
+#'   # 
+#'   # colnames(med_conf3)[which(colnames(med_conf3) == "copay_sum")] <- "copay"
+#'   
+#'   # rm(med_conf2)
+#'   
+#'   
+#'   
+#'   # change columns to match those of med_conf
+#'   # anticoagulant.split <- anticoagulant[patid %in% patids.split[[i]], ]
+#'   # colnames(anticoagulant.split)[which(colnames(anticoagulant.split) == "fill_dt")] <- "fst_dt"
+#'   # 
+#'   # anticoagulant.split$source <- "anticoagulant.outpatient"
+#'   # 
+#'   # med_conf_ac <- merge(x = med_conf3,
+#'   #                      y = anticoagulant.split,
+#'   #                      by = c("patid", "fst_dt", "copay", "source"),
+#'   #                      all = TRUE)
+#'   # 
+#'   # rm(med_conf3)
+#'   
+#'   
+#'   ### Add index VTE dates ------------------------------------------------------
+#'   pat_indexDt <- unique(patinfo[patid %in% patids.split[[i]], .(patid, index_dt)])
+#'   med_conf_ac <- merge(x = med_conf_ac,
+#'                        y = pat_indexDt,
+#'                        by = c("patid"), all.x = TRUE)
+#'   
+#'   
+#'   # change the order of columns
+#'   column_order <- c("patid", "index_dt", "fst_dt", "lst_dt", "copay", "source", 
+#'                     "conf_id", "pos", "description", "category",
+#'                     diag1_names, diagX_names, proc_names_order, 
+#'                     "gen_name", "days_sup", "quantity", "strength")
+#'   med_conf_ac <- med_conf_ac[, (column_order), with = FALSE]
+#'   
+#'   
+#'   # output each batch of data
+#'   # out_name <- paste0("combinedData_med_conf_ac", i, ".csv")
+#'   # write.csv(med_conf_ac, out_name, 
+#'   #           quote = FALSE, row.names=FALSE, na="")
+#'   
+#'   
+#'   # if(i == 1){
+#'   #   med_conf_ac2 <- data.table(matrix(NA, nrow = 0,
+#'   #                                     ncol = ncol(med_conf_ac)))
+#'   #   colnames(med_conf_ac2) <- c(colnames(med_conf_ac))
+#'   #   
+#'   # }
+#'   # 
+#'   # 
+#'   # reclass.out <- reclass(med_conf_ac, med_conf_ac2)
+#'   # med_conf_ac <- reclass.out[[1]]
+#'   # med_conf_ac2 <- reclass.out[[2]]
+#'   # 
+#'   # med_conf_ac2 <- rbind(med_conf_ac2, med_conf_ac)
+#'   # 
+#'   rm(med_conf_ac)
+#' }
+#' 
+#' # medical[, copay_sum := sum(copay), by = c("patid", "fst_dt", "pos")]
+
+
+
+
+
+
 
 
 
@@ -649,7 +815,7 @@ write.csv(med_conf_ac, "combinedData_med_conf_ac.csv",
 
 
 
-# mydata <- read.csv("combinedData_med_conf_ac.csv", header = TRUE)
+# mydata <- read.csv("diagData_20181020_freeze.csv", header = TRUE)
 
 
 
