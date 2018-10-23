@@ -14,6 +14,7 @@
 ##################################################
 
 library(plyr)
+library(MASS)
 
 # create tree structure
 mytree <- data.frame(matrix(c(rep(0, 10), # code does not appear
@@ -30,15 +31,29 @@ mytree <- data.frame(matrix(c(rep(0, 10), # code does not appear
                             ncol = 10, byrow = TRUE))
 
 # create edge potential
-prob <- c(40, 10, 20, 30, 40, 50, 60, 15, 25, 35, 40)
+prob <- c(20, # code does not appear
+          40, 35, 25, 20, 25, 15, # X1, X1-X2, ...
+          25, 20, 10, # X1-X7, ...
+          5) # X1-X10
 prob <- prob / sum(prob)
 
 
 # create diagnosis data
-N <- 5000 # sample size
+N <- 50 # number of observations
 n <- 1 # number of diagnosis codes
-mydata <- data.frame(matrix(NA, nrow = N, ncol = n))
+mydata <- data.frame(matrix(NA, nrow = N, ncol =10*n))
 colnames(mydata) <- paste0("code", 1:n)
+
+
+## introduce correlation between observatioins -----------
+
+# Model: logit(pi_ij) = b_i ~ N_k (0, Sigma)
+
+# generate a Toeplitz correlation structure
+S <- toeplitz((N:1)/N)
+bi <- mvrnorm(n = 1, mu = rep(0, N), Sigma = S)
+
+pi_i <- 1 / (1+exp(-bi))
 
 # assume that trees are independent for simplicity
 for(j in 1:N){

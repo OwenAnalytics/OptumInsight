@@ -34,7 +34,7 @@ colnames(medical) <- tolower(colnames(medical))
 
 # remove records after ICD-10 became effective
 # medical$fst_dt <- as.Date(medical$fst_dt)
-medical <- medical[medical$fst_dt < "2015-10-01",]
+# medical <- medical[medical$fst_dt < "2015-10-01",]
 
 # test <- medical[1:10000]
 
@@ -42,12 +42,12 @@ medical <- medical[medical$fst_dt < "2015-10-01",]
 # example <- test[patid == "802666500107193" & fst_dt == "2015-07-18", ]
 
 # change empty diagnoses to NA
-for (j in paste0("diag", 1:25)) 
-  set(medical, j = j, value = gsub("^$|-|^0{3,5}$", NA, medical[[j]]))
-
-# change empty or invalid proc_cd to NA
-# range of invalid CPT codes: < 00100
-medical$proc_cd <- with(medical, ifelse(proc_cd < "00100", NA, proc_cd))
+# for (j in paste0("diag", 1:25)) 
+#   set(medical, j = j, value = gsub("^$|-|^0{3,5}$", NA, medical[[j]]))
+# 
+# # change empty or invalid proc_cd to NA
+# # range of invalid CPT codes: < 00100
+# medical$proc_cd <- with(medical, ifelse(proc_cd < "00100", NA, proc_cd))
 
 
 
@@ -135,26 +135,24 @@ colnames(facility) <- tolower(colnames(facility))
 facility <- facility[proc_cd != "", ]
 facility <- unique(facility)
 
-# change empty or invalid proc_cd to NA
-# range of invalid CPT codes: < 00100
-facility$proc_cd <- with(facility, ifelse(proc_cd < "00100", NA, proc_cd))
-facility <- facility[is.na(proc_cd) == FALSE, ]
-
-# add lst_dt to match medical data
-facility$lst_dt <- ""
-facility$conf_id <- ""
-facility$source0 <- "facility.inpatient" # name it as source0 because source cannot go into dcast as a variable
-facility$pos <- ""
 
 for(i in 1:length(patids.split)){
   med <- subset(medical, patid %in% patids.split[[i]])
   # reduce the size of medical data
   medical <- subset(medical, ! (patid %in% patids.split[[i]]))
+  
+  med <- med[med$fst_dt < "2015-10-01",]
+  
+  # change empty diagnoses to NA
+  for (j in paste0("diag", 1:25)) 
+    set(med, j = j, value = gsub("^$|-|^0{3,5}$", NA, med[[j]]))
+  
+  # change empty or invalid proc_cd to NA
+  # range of invalid CPT codes: < 00100
+  med$proc_cd <- with(med, ifelse(proc_cd < "00100", NA, proc_cd))
+  
   # add source variable
   med$source0 <- ifelse(med$conf_id == "", "medical.outpatient", "medical.inpatient")
-  
-  fac <- subset(facility, patid %in% patids.split[[i]])
-  facility <- subset(facility, ! (patid %in% patids.split[[i]]))
   
   # get proc_cd from medical data
   # this step is moved here so that medical data can be deleted from memory
@@ -163,7 +161,24 @@ for(i in 1:length(patids.split)){
   
   rm(med)
   
+  
   ## deal with proc_cd from facility claims --------------------------------------
+  
+  fac <- subset(facility, patid %in% patids.split[[i]])
+  facility <- subset(facility, ! (patid %in% patids.split[[i]]))
+  
+  # add lst_dt to match medical data
+  fac$lst_dt <- ""
+  fac$conf_id <- ""
+  
+  # name it as source0 because source cannot go into dcast as a variable
+  fac$source0 <- "facility.inpatient" 
+  fac$pos <- ""
+  
+  # change empty or invalid proc_cd to NA
+  # range of invalid CPT codes: < 00100
+  fac$proc_cd <- with(fac, ifelse(proc_cd < "00100", NA, proc_cd))
+  fac <- fac[is.na(proc_cd) == FALSE, ]
   fac <- fac[, colnames(proc_med), with = FALSE]
   
   proc_med_fac <- unique(rbind(proc_med, fac))

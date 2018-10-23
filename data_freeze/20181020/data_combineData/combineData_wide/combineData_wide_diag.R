@@ -34,7 +34,7 @@ colnames(medical) <- tolower(colnames(medical))
 
 # remove records after ICD-10 became effective
 # medical$fst_dt <- as.Date(medical$fst_dt)
-medical <- medical[medical$fst_dt < "2015-10-01",]
+#medical <- medical[medical$fst_dt < "2015-10-01",]
 
 # test <- medical[1:10000]
 
@@ -42,12 +42,12 @@ medical <- medical[medical$fst_dt < "2015-10-01",]
 # example <- test[patid == "802666500107193" & fst_dt == "2015-07-18", ]
 
 # change empty diagnoses to NA
-for (j in paste0("diag", 1:25)) 
-  set(medical, j = j, value = gsub("^$|-|^0{3,5}$", NA, medical[[j]]))
+#for (j in paste0("diag", 1:25)) 
+#  set(medical, j = j, value = gsub("^$|-|^0{3,5}$", NA, medical[[j]]))
 
 # change empty or invalid proc_cd to NA
 # range of invalid CPT codes: < 00100
-medical$proc_cd <- with(medical, ifelse(proc_cd < "00100", NA, proc_cd))
+#medical$proc_cd <- with(medical, ifelse(proc_cd < "00100", NA, proc_cd))
 
 
 
@@ -156,6 +156,19 @@ patids.split <- split(patids, ceiling(x/group.size))
 for(i in 1:length(patids.split)){
   med <- subset(medical, patid %in% patids.split[[i]])
   
+  # reduce the size of medical data to save memory
+  medical <- subset(medical, ! (patid %in% patids.split[[i]]))
+  
+  med <- med[med$fst_dt < "2015-10-01",]
+  
+  # change empty diagnoses to NA
+  for (j in paste0("diag", 1:25)) 
+    set(med, j = j, value = gsub("^$|-|^0{3,5}$", NA, med[[j]]))
+
+  # change empty or invalid proc_cd to NA
+  # range of invalid CPT codes: < 00100
+  med$proc_cd <- with(med, ifelse(proc_cd < "00100", NA, proc_cd))
+  
   # sum up copays across rows with the same date and diagnoses
   med[, copay_sum := sum(copay), by = c("patid", "fst_dt", "pos")]
   
@@ -196,8 +209,14 @@ for(i in 1:length(patids.split)){
   
   # deal with diag1
   medical_diag1_long <- medical_diag_long[diag == "diag1", ]
-  # medical_diag1_long <- medical_diag1_long[order(
-  #   patid, fst_dt, lst_dt, conf_id, pos), ]
+  
+  # set the key to all columns
+  # setkey(medical_diag1_long)
+  # Get Unique lines in the data table
+  medical_diag1_long <- medical_diag1_long[!duplicated(medical_diag1_long[,
+    c("patid", "conf_id", "fst_dt", "lst_dt", "pos", "icd9_raw")]),]
+  # medical_diag1_long <- unique(medical_diag1_long[
+  #   list(patid, conf_id, fst_dt, lst_dt, pos, icd9_raw), nomatch = 0] ) 
   
   # transform from long to wide
   medical_diag1 <- dcast(setDT(medical_diag1_long),
@@ -211,8 +230,13 @@ for(i in 1:length(patids.split)){
   
   # deal with remaining diagnoses
   medical_diagX_long <- medical_diag_long[diag != "diag1", ]
-  
   rm(medical_diag_long)
+  
+  # set the key to all columns
+  # setkey(medical_diagX_long)
+  # Get Unique lines in the data table
+  medical_diagX_long <- medical_diagX_long[!duplicated(medical_diagX_long[,
+          c("patid", "conf_id", "fst_dt", "lst_dt", "pos", "icd9_raw")]),]
   
   medical_diagX_long$diag <- paste0("diag", rowidv(medical_diagX_long,
           cols = c("patid", "fst_dt", "lst_dt", "conf_id", "pos", "copay_sum"))+1)
@@ -251,6 +275,8 @@ for(i in 1:length(patids.split)){
   ## deal with diagnoses from confinement --------------------------
   confinement.split <- confinement[patid %in% patids.split[[i]], ]
   
+  confinement <- subset(confinement, ! (patid %in% patids.split[[i]]))
+  
   names_in_med_not_conf <- colnames(medical_all)[
     !colnames(medical_all) %in% colnames(confinement.split)]
   
@@ -276,7 +302,10 @@ for(i in 1:length(patids.split)){
   
   
   ### Add index VTE dates ------------------------------------------------------
-  pat_indexDt <- unique(patinfo[patid %in% patids.split[[i]], .(patid, index_dt)])
+  pat_indexDt <- unique(patinfo[patid %in% patids.split[[i]], ])
+  
+  patinfo <- subset(patinfo, ! (patid %in% patids.split[[i]]))
+  
   med_conf2 <- merge(x = med_conf2,
                        y = pat_indexDt,
                        by = c("patid"), all.x = TRUE)
@@ -290,6 +319,7 @@ for(i in 1:length(patids.split)){
   reclass.out <- reclass(final, med_conf2)
   final <- reclass.out[[1]]
   med_conf2 <- reclass.out[[2]]
+  rm(reclass.out)
 
   final <- rbind(final, med_conf2)
   
@@ -313,6 +343,46 @@ write.csv(final, "diagData_20181020_freeze.csv",
 
 
 
+
+
+
+# ### Check whether different levels of the same ICD9 code may appear  --------
+# medical_diagX_long$icd9_3digits <- with(medical_diagX_long,
+#                             ifelse(substr(icd9_raw, 1, 1)=="E",
+#                                    substr(icd9_raw, 1, 4),
+#                                    substr(icd9_raw, 1, 3)))
+# medical_diagX_long$icd9_4digits <- with(medical_diagX_long,
+#                             ifelse(substr(icd9_raw, 1, 1)=="E",
+#                                    ifelse(nchar(icd9_raw) < 5, "", substr(icd9_raw, 1, 5)),
+#                                    ifelse(nchar(icd9_raw) < 4, "", substr(icd9_raw, 1, 4))))
+# 
+# medical_diagX_long$icd9_5digits <- with(medical_diagX_long,
+#                             ifelse(substr(icd9_raw, 1, 1)=="E",
+#                                    "",
+#                                    ifelse(nchar(icd9_raw) < 5, "", substr(icd9_raw, 1, 5))))
+# 
+# library(dplyr)
+# icd9_only3 <- medical_diagX_long %>%
+#   group_by(patid, conf_id, fst_dt, lst_dt, pos, icd9_3digits, icd9_4digits) %>%
+#   mutate(n = n()) %>%
+#   # count(icd9_3digits) %>%
+#   arrange(patid, fst_dt, lst_dt, icd9_3digits, icd9_4digits) %>%
+#   filter(icd9_4digits == "") %>%
+#   select(patid, conf_id, fst_dt, lst_dt, pos, n)
+# 
+# icd9_only4 <- medical_diagX_long %>%
+#   group_by(patid, conf_id, fst_dt, lst_dt, pos, icd9_3digits, icd9_4digits) %>%
+#   mutate(n = n()) %>%
+#   # count(icd9_3digits) %>%
+#   arrange(patid, fst_dt, lst_dt, icd9_3digits, icd9_4digits) %>%
+#   filter(icd9_4digits != "") %>%
+#   select(patid, conf_id, fst_dt, lst_dt, pos, n)
+# 
+# 
+# check_dup <- merge(x = icd9_only3, y = icd9_only4,
+#                    by = c("patid", "conf_id", "fst_dt", "lst_dt", "pos"),
+#                    all = FALSE)
+# check_dup$three_not_four <- (check_dup$icd9_3digits.x == check_dup$icd9_3digits.y)
 
 
 #' for(i in 1:length(patids.split)){
