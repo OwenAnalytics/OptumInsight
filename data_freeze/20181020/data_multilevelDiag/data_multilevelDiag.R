@@ -15,7 +15,6 @@
 #'     different data sets. The duplicacy and incompatibility of proc_cd
 #'     from facility claims and proc_cd from medical or confinement 
 #'     claims make the two information hard to combine.
-#'  10/23/2018 - Add charge variable from medical and confinement data
 ##################################################
 
 library(data.table)
@@ -81,7 +80,6 @@ confinement$source <- "confinement.inpatient"
 # modify columns to match medical data set
 colnames(confinement)[which(colnames(confinement) == "admit_dt")] <- "fst_dt"
 colnames(confinement)[which(colnames(confinement) == "disch_dt")] <- "lst_dt"
-colnames(confinement)[which(colnames(confinement) == "charge")] <- "charge_sum"
 colnames(confinement)[which(colnames(confinement) == "copay")] <- "copay_sum"
 colnames(confinement)[which(colnames(confinement) == "diag1")] <- "diag1_1"
 
@@ -171,8 +169,8 @@ for(i in 1:length(patids.split)){
   med$proc_cd <- with(med, ifelse(proc_cd < "00100", NA, proc_cd))
   
   # sum up copays across rows with the same date and diagnoses
-  med[, `:=`(charge_sum = sum(charge),
-             copay_sum = sum(copay)), by = c("patid", "fst_dt", "pos")]
+  med[, `:=`(copay_sum = sum(copay),
+             charge_sum = sum(charge)), by = c("patid", "fst_dt", "pos")]
   
   # # get proc_cd from medical data
   # # this step is moved here so that medical data can be deleted from memory
