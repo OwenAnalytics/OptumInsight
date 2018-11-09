@@ -78,7 +78,7 @@ ggplot(data = n_gaps_individual, aes(x = n_gaps, fill = "salmon")) +
        title = "Histogram of number of insurance coverage gaps
        at any time") +
   theme(legend.position="none")
-ggsave("histogram_nCoverageGaps.pdf")
+ggsave("histogram_nGaps.pdf")
 
 
 # lapses after index VTE
@@ -97,7 +97,7 @@ ggplot(data = n_gapsAfterVTE_individual,
        title = "Histogram of number of insurance coverage gaps
        after index VTE") +
   theme(legend.position="none")
-ggsave("histogram_nCoverageGapsAfterVTE.pdf")
+ggsave("histogram_nGapsAfterVTE.pdf")
 
 
 
@@ -111,7 +111,9 @@ member_withGaps[,
   gapLength := as.numeric(eligeff-lag(eligend))/30, #gapLength in month
   by = patid]
 
-ggplot(data = member_withGaps[!is.na(gapLength),],
+member_gapsHappen <- member_withGaps[!is.na(gapLength),]
+
+ggplot(data = member_gapsHappen,
        aes(x = gapLength, fill = "salmon")) +
   geom_histogram(alpha=0.3, position="identity", binwidth = 1) +
   facet_grid(gapAfterVTE ~ ., labeller = label_both) +
@@ -119,7 +121,7 @@ ggplot(data = member_withGaps[!is.na(gapLength),],
        y = "Frequency",
        title = "Histogram of length of insurance coverage gaps") +
   theme(legend.position="none")
-ggsave("histogram_lengthCoverageGaps.pdf")
+ggsave("histogram_lengthGaps.pdf")
 
 
 modes <- function(x, na.remove = TRUE) {
@@ -128,9 +130,67 @@ modes <- function(x, na.remove = TRUE) {
   tab <- tabulate(match(x, ux))
   ux[tab == max(tab)]
 }
-gaps <- na.omit(member_withGaps$gap_length)
 
 sink("output_insuranceGaps.txt", append = TRUE)
-print("Summary of gaps:"); summary(gaps)
-print("Mode of gaps:"); modes(gaps)
+print("Summary of gap lengths in months:")
+member_gapsHappen %>%
+  group_by(gapAfterVTE) %>%
+  summarise("Min" = min(gapLength),
+            "1st Qu" = quantile(gapLength, 0.25),
+            "Median" = median(gapLength),
+            "3rd Qu." = quantile(gapLength, 0.75),
+            "Max" = max(gapLength),
+            "Mean" = mean(gapLength),
+            "SD" = sd(gapLength)) %>%
+  print(n = Inf)
+sink(NULL)
+
+
+
+### 3. The number of days after index VTE when the first lapse happens ------------
+
+# gaps in months
+member_withGaps[, gapsHappenNDaysAfterVTE := as.numeric(eligeff - index_dt) / 30]
+
+# consider gaps after index VTE
+gapsAfterVTE <- member_withGaps[gapsHappenNDaysAfterVTE > 0, ]
+
+# only consider the first gap
+firstGapAfterVTE <- gapsAfterVTE[
+  gapsAfterVTE[ , .I[which.min(gapsHappenNDaysAfterVTE)],
+                by = patid]$V1]
+
+ggplot(data = firstGapAfterVTE,
+      aes(x = gapsHappenNDaysAfterVTE, 
+          y = gapLength,
+          fill = "salmon")) +
+  geom_point() +
+  labs(x = "Months after index VTE when the first gap starts",
+      y = "Length of gap in months",
+      title = "The number of months after index VTE 
+      when the first insurance coverage gap happens VS length of gaps") +
+  theme(legend.position="none")
+ggsave("histogram_firstGapsAfterVTEvsLength.pdf")
+
+ggplot(data = firstGapAfterVTE,
+       aes(x = gapsHappenNDaysAfterVTE, fill = "salmon")) +
+  geom_histogram(alpha=0.3, position="identity", binwidth = 1) +
+  labs(x = "Months after index VTE when the first gap starts",
+       y = "Frequency",
+       title = "Histogram of the number of months after index VTE 
+       when the first insurance coverage gap happens") +
+  theme(legend.position="none")
+ggsave("histogram_firstGapsAfterVTE.pdf")
+
+
+sink("output_insuranceGaps.txt", append = TRUE)
+print("Summary of the first gap after index VTE in months:")
+firstGapAfterVTE %>%
+  summarise("Min" = min(gapsHappenNDaysAfterVTE),
+            "1st Qu" = quantile(gapsHappenNDaysAfterVTE, 0.25),
+            "Median" = median(gapsHappenNDaysAfterVTE),
+            "3rd Qu." = quantile(gapsHappenNDaysAfterVTE, 0.75),
+            "Max" = max(gapsHappenNDaysAfterVTE),
+            "Mean" = mean(gapsHappenNDaysAfterVTE),
+            "SD" = sd(gapsHappenNDaysAfterVTE)) 
 sink(NULL)
