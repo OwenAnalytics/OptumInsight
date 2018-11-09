@@ -25,7 +25,7 @@ medical <- fread("../diagData_20181020_freeze.csv",
 medical <- medical[fst_dt <= index_dt, ]
 medical$index_dt <- as.Date(medical$index_dt)
 medical$fst_dt <- as.Date(medical$fst_dt)
-medical <- medical[fst_dt >= index_dt - 365, ]
+medical <- medical[fst_dt >= index_dt - 360, ]
 
 
 # read in ICD9 codes for VTE
@@ -51,6 +51,17 @@ bad.patid <- unique(medical_long[is.vte==TRUE & fst_dt < index_dt, patid])
 bad.data <- medical_long[patid %in% bad.patid & is.vte==TRUE,]
 
 bad.data <- unique(bad.data[order(patid, fst_dt)])
+
+
+patient_data <- fread("../separateData/patient_data.txt",
+                      select = c("patid", "yrdob"))
+patient.yrdob <- unique(patient_data[patid %in% bad.data$patid,
+                                     .(patid, yrdob)])
+bad.data <- merge(x = bad.data,
+                  y = patient.yrdob,
+                  by = "patid",
+                  all.x = TRUE)
+bad.data$diag.age <- as.integer(year(bad.data$fst_dt) - bad.data$yrdob)
 
 write.csv(bad.data, "VTEBeforeIndexdt.csv")
 
