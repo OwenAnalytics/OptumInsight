@@ -35,7 +35,6 @@ mydata[, tend := time]
 coxph(Surv(time, event) ~ cluster(ID) + X.1 + X.2, mydata)
 
 
-
 mod.coxAG <- frailtyPenal(
   Surv(tstart, tend, event) ~
     cluster(ID) + X.1 + X.2,

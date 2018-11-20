@@ -39,6 +39,7 @@ confinement$fst_dt <- as.Date(confinement$fst_dt)
 confinement$lst_dt <- as.Date(confinement$lst_dt)
 confinement$los <- as.numeric(confinement$lst_dt - confinement$fst_dt) + 1
 confinement$pos <- as.factor(confinement$pos)
+confinement$charge <- as.numeric(confinement$charge)
 
 confinementAfterVTE <- confinement[fst_dt >= index_dt,]
 
@@ -68,11 +69,12 @@ confinementAfterVTE_firstAdmit <-
 #         los + charge + cluster(patid),
 #       confinementAfterVTE_firstAdmit)
 
-coxph(Surv(admit_daysAfterVTE, admit) ~
-        age + male + charge + cluster(patid),
+cox.model <- coxph(Surv(admit_daysAfterVTE, admit) ~
+        los + age + male + charge + cluster(patid),
       confinementAfterVTE_firstAdmit)
-
-
+cox.ph <- cox.zph(cox.model)
+cox.ph
+# plot(cox.ph)
 
 
 ### Using frailtypack to fit recurrent admissions ---------------------------
@@ -84,11 +86,16 @@ confinementAfterVTE$disch_daysAfterVTE2 <-
          confinementAfterVTE$disch_daysAfterVTE+0.5,
          confinementAfterVTE$disch_daysAfterVTE)
 
+set.seed(2018)
+patids <- unique(confinementAfterVTE$patid)
+subid <- sample(patids, 10, replace = FALSE)
+subdata <- confinementAfterVTE[patid %in% subid,]
+
 mod.coxAG <- frailtyPenal(
   Surv(admit_daysAfterVTE, disch_daysAfterVTE2, admit) ~
     cluster(patid) + age,
   n.knots = 10, kappa = 1, recurrentAG = TRUE,
-  data = confinementAfterVTE, cross.validation = TRUE)
+  data = subdata, cross.validation = TRUE)
 
 
 
