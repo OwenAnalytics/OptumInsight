@@ -198,6 +198,8 @@ diagnosisInformation <- list(
 rm(list=setdiff(ls(), "diagnosisInformation"))
 
 
+save(diagnosisInformation, file="diagnosisInformation.RData")
+
 
 # library(Matrix)
 # load("diagnosisInformation_500patients.RData")

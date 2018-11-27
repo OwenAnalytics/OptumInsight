@@ -1,6 +1,7 @@
 ---
 title: "An Example of DiagnosisInformation"
-output: html_notebook
+output: html_document
+
 ---
 
 ```{r setup, include=FALSE}
@@ -17,8 +18,8 @@ library(Matrix)
 
 This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list_500patients.R. 
   
-The .RData contains a list named diagnosisInformation of 500 patients. All information
-comes from medical claims data from 2007-01-01 to 2015-09-30.
+We consider both inpatient and outpatient diagnoses from medical claims data, obtained from rows in `diagData_20181020_freeze.csv` that have `source %in% ("medical.inpatient", "medical.outpatient")`. The diagnoses range from 2007-01-01 to 2015-09-30. All diagnoses, regardless of being before or after index VTE date, are included. The `diagnosisInformation.RData` contains a list named diagnosisInformation of 500 patients. 
+
 
 The list contains:
 

@@ -5,6 +5,10 @@ output:
   html_notebook: deafult
 ---
 
+<!-- Revision:
+11/27/2018 - Change the model coefficients to exponentiated coefficients in the output, so that the result can be interpreted using probability directly.
+-->
+
 ## Summary:
 At 3 months, people with "Other" and "Not captured" are removed. Remaining sample size = 12,652.
 
@@ -199,20 +203,21 @@ round_pvalues <- function(x){
 create_coefficients_table <- function(model, title_index){
   s <- summary(model)
 
-  s_coef <- round(data.matrix(s$coefficients), 3)
+  # s_coef <- round(data.matrix(s$coefficients), 3)
+  s_coef_exp <- round(data.matrix(exp(s$coefficients)), 3)
   s_se <- round(data.matrix(s$standard.errors), 3)
   
   z <- s$coefficients/s$standard.errors
   # 2-tailed Wald z tests to test significance of coefficients
   p <- data.matrix(sapply((1-pnorm(abs(z), 0, 1))*2, round_pvalues))
-  ci.lower <- round(s$coefficients-1.96*s$standard.errors, 3)
-  ci.higher <- round(s$coefficients+1.96*s$standard.errors, 3)
+  ci.lower <- round(exp(s$coefficients-1.96*s$standard.errors), 3)
+  ci.higher <- round(exp(s$coefficients+1.96*s$standard.errors), 3)
   ci <- paste0("(", ci.lower, ", ", ci.higher, ")")
 
-  coef_table <- t(matrix(paste0(s_coef, " (", p, ")", "\\\n", ci), nrow=3))
-  colnames(coef_table) <- rownames(s_coef)
-  rownames(coef_table) <- colnames(s_coef)
-  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: \\\ncoefficient (p-value from Wald test) \\\n 95% confidence interval")
+  coef_table <- t(matrix(paste0(s_coef_exp, " (", p, ")", "\\\n", ci), nrow=3))
+  colnames(coef_table) <- rownames(s_coef_exp)
+  rownames(coef_table) <- colnames(s_coef_exp)
+  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: \\\nExponentiated coefficient (p-value from Wald test) \\\n 95% confidence interval of the exponentiated coefficient")
   kable(coef_table, format="html", booktabs = T, caption = title_name1) %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
      footnote(general = "\\*\\*\\*: p < 0.001; **: p < 0.01; *: p < 0.05")
