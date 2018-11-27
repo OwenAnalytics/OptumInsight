@@ -1,0 +1,61 @@
+---
+title: "An Example of DiagnosisInformation"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured')
+
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(reshape2)
+library(data.tree)
+library(Matrix)
+```
+
+This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list_500patients.R. 
+  
+The .RData contains a list named diagnosisInformation of 500 patients. All information
+comes from medical claims data from 2007-01-01 to 2015-09-30.
+
+The list contains:
+
+- _patients_ = a character vector of patient ids
+- _roots_ = a character vector of roots of the ICD-9 trees, i.e. 3-digit ICD-9 codes. roots[i] is a 3-digit ICD-9 code of the patient with ID patid[i]
+- _trees_ = a list of sparse adjacency matrices that represent the tree-structured ICD-9 codes. The name of each element is the root of the tree.
+- _nodes_ = a list of character vectors containing the nodes of each tree in trees. The name of each element is the root of the tree.
+- _counts_ = a list of numeric vectors containing the number of times each node appears
+in the patient's medical record, regardless of date of service. The name of each element is of the form "patid:rootName".
+
+We show an example of patient 802666500100523.
+
+The 3-digit ICD-9 codes that patient 802666500100523 had at least once in medical claims data.
+```{r}
+load("diagnosisInformation_500patients.RData")
+testIndex <- which(diagnosisInformation$patients=="802666500100523")
+diagnosisInformation$roots[testIndex]
+```
+
+Now we look at one of the trees with root "388". The tree is represented using an adjacency matrix. Denote this matrix as $M$. $M_{jk} = 1$ if the $k$-th node is a child of the $j$-th node. Hence, each rowSum equals the number of children the corresponding node has. Each column has at most one 1.
+```{r}
+diagnosisInformation$trees$`388`
+```
+
+Here is the vector of all nodes in the tree with root "388". This vector contains the row names of the sparse matrix above.
+```{r}
+diagnosisInformation$nodes$`388`
+```
+
+The _counts_ vector counts how many times patient "802666500100523" was diagnosed with each node in the tree with root "388". The counting follows the rule that if a 4/5-digit ICD-9 code is present (node = 1), then the corresponding 3/4-digit ICD-9 code is present.
+```{r}
+diagnosisInformation$counts$`802666500100523:388`
+```
+
+
+
+
+
+
+

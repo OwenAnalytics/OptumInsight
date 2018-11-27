@@ -20,7 +20,6 @@ library(frailtypack)
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_coxFirstAdmission")
 
 
-
 # read in confinement data ------------------------------------------------
 
 diagData <- fread("../diagData_20181020_freeze.csv",
@@ -81,9 +80,14 @@ cox.ph
 library(frailtypack)
 
 # to prevent start time = stop time
+confinementAfterVTE$admit_daysAfterVTE2 <- 
+  ifelse(confinementAfterVTE$admit_daysAfterVTE == 0,
+         0.1,
+         confinementAfterVTE$admit_daysAfterVTE)
+
 confinementAfterVTE$disch_daysAfterVTE2 <- 
   ifelse(confinementAfterVTE$admit_daysAfterVTE == confinementAfterVTE$disch_daysAfterVTE,
-         confinementAfterVTE$disch_daysAfterVTE+0.5,
+         confinementAfterVTE$disch_daysAfterVTE+0.1,
          confinementAfterVTE$disch_daysAfterVTE)
 
 set.seed(2018)
@@ -91,12 +95,21 @@ patids <- unique(confinementAfterVTE$patid)
 subid <- sample(patids, 10, replace = FALSE)
 subdata <- confinementAfterVTE[patid %in% subid,]
 
+#' Shared frailty model:
+#' lambda_ij(t|v_i) = v_i * lambda_0(t) exp(beta^top X_ij) = v_i lambda_ij(t)
+#' where v_i iid~ Gamma(1/theta, 1/theta)
+subdata$relative_event_time <- subdata$disch_daysAfterVTE-subdata$admit_daysAfterVTE
 mod.coxAG <- frailtyPenal(
-  Surv(admit_daysAfterVTE, disch_daysAfterVTE2, admit) ~
+  Surv(relative_event_time, admit) ~
     cluster(patid) + age,
-  n.knots = 10, kappa = 1, recurrentAG = TRUE,
-  data = subdata, cross.validation = TRUE)
+  n.knots = 10,kappa=1,
+  data = subdata)
 
+
+additivePenal(Surv(admit_daysAfterVTE, admit) ~
+                cluster(patid) + age + charge + slope(los) + los,
+              data = subdata, correlation = FALSE, n.knots = 10,
+              cross.validation = FALSE, kappa = 1, maxit = 350)
 
 
 

@@ -91,9 +91,19 @@ medical_long.counts <- unique(medical_long)
 
 ## find the number of roots at each level
 sink("output_icd9PatientSummary.txt", append = FALSE, split = FALSE)
-print("The number of 3-digit ICD-9 codes is "); length(unique(medical_long.counts$icd9_3digits)) #1190
-print("The number of 4-digit ICD-9 codes is "); length(unique(medical_long.counts$icd9_4digits)) #5836
-print("The number of 5-digit ICD-9 codes is "); length(unique(medical_long.counts$icd9_5digits)) #6106
+cat("The summary of ICD-9 codes in this file concerns diagnosis codes that appear at least once 
+    from medical claims data, both inpatient and outpatient. The diagnosis codes 
+    considered range from 2007-01-01 to 2015-09-30, and aggregate over all patients
+    regardless of place of service.")
+
+cat("\nThe number of unique 3-digit ICD-9 codes is ")
+length(unique(medical_long.counts$icd9_3digits)) #1385
+
+cat("\nThe number of unique 4-digit ICD-9 codes is ")
+length(unique(medical_long.counts$icd9_4digits)) #5376
+
+cat("\nThe number of unique 5-digit ICD-9 codes is ")
+length(unique(medical_long.counts$icd9_5digits)) #5000
 sink(NULL)
 
 
@@ -138,21 +148,21 @@ write.csv(medical_long.counts, "icd9_frequency_table.csv",
 
 sink("output_icd9PatientSummary.txt", append = TRUE, split = FALSE)
 
-print("frequency of ICD-9 codes with 3 digits")
+cat("\nFrequency of ICD-9 codes with 3 digits\n")
 summary(medical_long.counts$count_3digits[medical_long.counts$icd9_3digits != ""])
-print("10 most frequent 3-digit ICD-9 codes")
+cat("\n10 most frequent 3-digit ICD-9 codes\n")
 sort(table(medical_long$icd9_3digits[medical_long$icd9_3digits != ""]),
      decreasing = TRUE)[1:10]
 
-print("frequency of ICD-9 codes with 4 digits")
+cat("\nfrequency of ICD-9 codes with 4 digits\n")
 summary(medical_long.counts$count_4digits[medical_long.counts$icd9_4digits != ""])
-print("10 most frequent 4-digit ICD-9 codes")
+cat("\n10 most frequent 4-digit ICD-9 codes\n")
 sort(table(medical_long$icd9_4digits[medical_long$icd9_4digits != ""]),
      decreasing = TRUE)[1:10]
 
-print("frequency of ICD-9 codes with 5 digits")
+cat("\nfrequency of ICD-9 codes with 5 digits \n")
 summary(medical_long.counts$count_5digits[medical_long.counts$icd9_5digits != ""])
-print("10 most frequent 5-digit ICD-9 codes")
+cat("\n10 most frequent 5-digit ICD-9 codes")
 sort(table(medical_long$icd9_5digits[medical_long$icd9_5digits != ""]),
      decreasing = TRUE)[1:10]
 

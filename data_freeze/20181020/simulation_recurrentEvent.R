@@ -20,6 +20,8 @@ set.seed(2015)
 ## with different time-invariant covariates and time origins
 n <- 100
 
+
+### What model is this???
 mydata <- simEventData(z = cbind(rnorm(n), rbinom(n, 1, 0.5)),
              zCoef = c(1, - 0.5), recurrent = TRUE,
              rho = 0.2, origin = 0, endTime = rgamma(n, 10, 1))
@@ -40,7 +42,7 @@ mod.coxAG <- frailtyPenal(
     cluster(ID) + X.1 + X.2,
   n.knots = 10, kappa = 1, recurrentAG = TRUE,
   data = mydata, cross.validation = TRUE)
-# estimated coefficients: beta1=0.995, beta2=-0.566
+# estimated coefficients: beta1=0.995, beta2=-0.566, pretty close to the truth
 
 
 
