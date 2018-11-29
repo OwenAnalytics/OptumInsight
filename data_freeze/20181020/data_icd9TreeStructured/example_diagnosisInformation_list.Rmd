@@ -34,7 +34,7 @@ We show an example of patient 802666500100523.
 
 The 3-digit ICD-9 codes that patient 802666500100523 had at least once in medical claims data.
 ```{r}
-load("diagnosisInformation_500patients.RData")
+load("diagnosisInformation_list.RData")
 testIndex <- which(diagnosisInformation$patients=="802666500100523")
 diagnosisInformation$roots[testIndex]
 ```
