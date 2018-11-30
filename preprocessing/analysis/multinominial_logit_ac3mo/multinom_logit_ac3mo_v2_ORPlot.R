@@ -113,63 +113,20 @@ dat2 <- within(dat2, product2 <- relevel(product2, ref = "HMO"))
 vte_names0 <- colnames(dat2)[grep("VTE_", colnames(dat2))]
 vte_names1 <- vte_names0[-which(vte_names0 %in% c("VTE_IVC","VTE_Portal.vein", "VTE_Renal.vein"))]
 
-
 # Add combined malignancies
 malignancy_names <- colnames(dat2)[grep("malignancy_", colnames(dat2))]
-
 
 # remove people who have Other AC
 data_ac3mo <- dat2[!ac3mo %in% c("Other", "Not captured"),]
 data_ac3mo$ac3mo2 <- factor(data_ac3mo$ac3mo2)
 data_ac3mo$ac3mo_copay_rng <- factor(data_ac3mo$ac3mo_copay_rng)
 
-data_ac4mo <- dat2[!ac4mo %in% c("Other", "Not captured"),]
-data_ac4mo$ac4mo2 <- factor(data_ac4mo$ac4mo2)
-data_ac4mo$ac4mo_copay_rng <- factor(data_ac4mo$ac4mo_copay_rng)
-
-round_pvalues <- function(x){
-  if (x < 0.001) {
-    return("p < 0.001 ***")
-  } else if (0.001 <= x & x < 0.01) {
-    return("p < 0.01 **")
-  } else if (0.01 <= x & x < 0.05) { 
-    return(paste("p =", round(x, 3), "*"))
-  } else return(paste("p =", round(x, 3)))
-}
-
-create_coefficients_table <- function(model, title_index){
-  s <- summary(model)
-
-  # s_coef <- round(data.matrix(s$coefficients), 3)
-  s_coef_exp <- round(data.matrix(exp(s$coefficients)), 3)
-  s_se <- round(data.matrix(s$standard.errors), 3)
-  
-  z <- s$coefficients/s$standard.errors
-  # 2-tailed Wald z tests to test significance of coefficients
-  p <- data.matrix(sapply((1-pnorm(abs(z), 0, 1))*2, round_pvalues))
-  ci.lower <- round(exp(s$coefficients-1.96*s$standard.errors), 3)
-  ci.higher <- round(exp(s$coefficients+1.96*s$standard.errors), 3)
-  ci <- paste0("(", ci.lower, ", ", ci.higher, ")")
-
-  coef_table <- t(matrix(paste0(s_coef_exp, " (", p, ")", "\\\n", ci), nrow=3))
-  colnames(coef_table) <- rownames(s_coef_exp)
-  rownames(coef_table) <- colnames(s_coef_exp)
-  title_name1 <- paste0("Model ", title_index, ". Results of multinomial logistic regression model. \\\n Output format: \\\nExponentiated coefficient (p-value from Wald test) \\\n 95% confidence interval of the exponentiated coefficient")
-  kable(coef_table, format="html", booktabs = T, caption = title_name1) %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-     footnote(general = "\\*\\*\\*: p < 0.001; **: p < 0.01; *: p < 0.05")
-}
-
-
 
 ## Multinomial logistic regression on AC at 3 months
 
 ### Model:  
-
 fm.ac3mo <- as.formula(paste("ac3mo2~", paste(c(vte_names1), collapse="+"), "+ vte_history + hospitalized + ", paste(malignancy_names, collapse = "+"), "+ charlson_comorb_score + division + education2 + income_range + age_s + male + race"))
 fit.ac3mo <- multinom(fm.ac3mo, data=data_ac3mo, trace=FALSE)
-# create_coefficients_table(fit.ac3mo, "")
-
 
 
 
@@ -198,14 +155,86 @@ ci.higher <- rbind(ci.higher[,1], ci.higher[,2], ci.higher[,3])
 
 plot_data <- cbind(s_coef_exp, ci.lower, ci.higher)
 
-# create y-axis values
-plot_data$yAxis[plot_data$response == "Warfarin"] <- (1:length(covariateNames))*2
-plot_data$yAxis[plot_data$response == "DOAC"] <- (1:length(covariateNames))*2-0.5
-plot_data$yAxis[plot_data$response == "Unknown/Multiple"] <- (1:length(covariateNames))*2-1
-plot_data <- plot_data[response != "(Intercept)",]
+# specify row order
+vte_names <- c("VTE_Pulmonary.embolism", "VTE_Lower.extremity.DVT",
+               "VTE_Upper.extremity.DVT", "VTE_ivc_rv_pv", "VTE_Other")
+malignancy_names <- grep("malignancy_", covariateNames, value = TRUE)
+division_names <- c("divisionEAST SOUTH CENTRAL", "divisionMIDDLE ATLANTIC",
+  "divisionMOUNTAIN", "divisionNEW ENGLAND", "divisionPACIFIC", "divisionSOUTH ATLANTIC",
+  "divisionWEST NORTH CENTRAL", "divisionWEST SOUTH CENTRAL", "divisionUNKNOWN")
+education_names <- grep("education", covariateNames, value = TRUE)
+income_names <- paste("income_range", c(1:5,0), sep = "")
+race_names <- grep("race", covariateNames, value = TRUE)
+other_names <- c("vte_history", "hospitalizedTRUE", "charlson_comorb_score",
+  "age_s", "male")
+covariateNames_ordered <- c("(Intercept)", vte_names, malignancy_names, division_names,
+  education_names, income_names, race_names, other_names)
 
-yLabels <- c("VTE: Lower Extremity DVT", "VTE: Other"                   "VTE_Pulmonary.embolism"     
-             [5] "VTE_Upper.extremity.DVT"     "VTE_ivc_rv_pv")
+response_ordered <- c("DOAC", "Warfarin", "Unknown/Multiple")
+
+plot_data <- data.table(plot_data %>%
+  arrange(match(covariate, covariateNames_ordered), 
+          match(response, response_ordered)))
+
+plot_data_sub <- plot_data[covariate != "(Intercept)" & response != "Unknown/Multiple",]
+
+
+# create y-axis values
+plot_data_sub$yAxis[plot_data_sub$covariate %in% other_names] <- 
+  c(rbind(1:length(other_names)-0.25, 1:length(other_names)))
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% race_names] <- 
+  c(rbind(length(race_names):1-0.25, length(race_names):1)) + ymax + 2
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% income_names] <- 
+  c(rbind(length(income_names):1-0.25, length(income_names):1)) + ymax + 2
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% education_names] <- 
+  c(rbind(length(education_names):1-0.25, length(education_names):1)) + ymax + 2
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% division_names] <- 
+  c(rbind(length(division_names):1-0.25, length(division_names):1)) + ymax + 2
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% malignancy_names] <- 
+  c(rbind(length(malignancy_names):1-0.25, length(malignancy_names):1)) + ymax + 2
+
+ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
+plot_data_sub$yAxis[plot_data_sub$covariate %in% vte_names] <- 
+  c(rbind(length(vte_names):1-0.25, length(vte_names):1)) + ymax + 2
+
+
+
+
+# plot_data_sub$yAxis <- 80 - plot_data_sub$yAxis
+
+
+vte_labels <- c("VTE --- Pulmonary embolism", "Lower extremity DVT",
+    "Upper extremity DVT", "IVC/RV/PV", "Other")
+malignancy_labels <- c("Malignancy --- Brain CNS", "Breast", "Gastrointestinal",
+    "Genitourinary", "Gynecololgic", "Hematologic", "Lung", "Other")
+division_labels <- c("Division (compared to East North Central) --- East South Central", 
+    "Middle Atlantic",
+    "Mountain", "New England", "Pacific", "South Atlantic", "West North Central",
+    "West South Central", "Unknown")
+education_labels <- c("Education (compared to < Bachelor Degree) --- <= high school diploma",
+    ">= Bachelor Degree", "Unknown")
+income_labels <- c("Household Income (compared to $100K+) --- <$40K", "$40K-$49K",
+    "$50K-$59K", "$60K-$74K", "$75K-$99K", "Unknown")
+race_labels <- c("Race (compared to White) --- Asian", "Black", "Hispanic", "Unknown")
+other_labels <- c("VTE history", "Hospitalization", "Charlson comorbidity score",
+    "Age (normalized)", "Male")
+covariate_labels <- c(vte_labels, malignancy_labels, division_labels,
+    education_labels, income_labels, race_labels, other_labels)
+
+n_vars <- length(covariateNames_ordered) - 1 # intercept was removed
+
+# create y axis breaks
+yAxisBreaks <- plot_data_sub$yAxis[(1:n_vars)*2]
 
 ## Plot of all categories
 # ggplot(plot_data, aes(x = beta, y = yAxis)) +
@@ -226,25 +255,39 @@ yLabels <- c("VTE: Lower Extremity DVT", "VTE: Other"                   "VTE_Pul
 
 
 
-ggplot(plot_data[response != "Unknown/Multiple",], aes(x = beta, y = yAxis)) +
+ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
   geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
   geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 0.5,
-                 height = 1, color = "black") +
+                 height = 0.7, color = "black") +
   geom_point(aes(shape = response), size = 2, color = "black") +
-  scale_shape_manual(values = c(1, 16)) + 
-  # facet_grid(.~response) +
+  scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
   theme_bw() +
   theme(panel.grid.minor = element_blank()) +
-  scale_y_continuous(breaks = (1:length(covariateNames))*2, labels = covariateNames) +
+  scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
   scale_x_continuous(breaks = seq(0,7,1)) +
   coord_trans(x = "log10") +
   ylab("") +
-  xlab("Odds ratio (log scale)") +
-  ggtitle("Log odds ratio and 95% confidence intervals")
+  xlab("Odds ratio (log10 scale)") +
+  ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
 
-ggsave("plot_logOR2.pdf")
+ggsave("plot_OR_log10Scale.png")
 
 
+ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
+  geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
+  geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 0.5,
+                 height = 0.7, color = "black") +
+  geom_point(aes(shape = response), size = 2, color = "black") +
+  scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
+  scale_x_continuous(breaks = seq(0,7,1)) +
+  ylab("") +
+  xlab("Odds ratio") +
+  ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
+
+ggsave("plot_OR_originalScale.png")
 
 
 
