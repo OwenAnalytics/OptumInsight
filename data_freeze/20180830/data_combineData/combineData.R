@@ -16,11 +16,11 @@
 library(data.table)
 library(reshape2)
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20180830")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20180830/data_combineData")
 # setwd("/home/mengbing/GSRA/")
 
 ## read in medical claims data --------------------------------------------------
-medical <- fread("medicalClaims.txt",
+medical <- fread("../separateData/medicalClaims.txt",
                  select = c("patid", "Conf_Id", "Copay", paste0("Diag", 1:25),
                             "Fst_Dt", "Lst_Dt", "Proc_Cd", "Prov"),
                  colClasses = list(character=c("patid", "Conf_Id", 

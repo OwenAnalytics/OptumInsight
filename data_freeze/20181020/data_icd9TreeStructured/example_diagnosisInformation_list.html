@@ -134,38 +134,104 @@ $(document).ready(function () {
 </ul>
 <p>We show an example of patient 802666500100523.</p>
 <p>The 3-digit ICD-9 codes that patient 802666500100523 had at least once in medical claims data.</p>
-<pre class="r"><code>load(&quot;diagnosisInformation_500patients.RData&quot;)
+<pre class="r"><code>load(&quot;diagnosisInformation_list.RData&quot;)
 testIndex &lt;- which(diagnosisInformation$patients==&quot;802666500100523&quot;)
 diagnosisInformation$roots[testIndex]</code></pre>
 <pre><code>##  [1] &quot;174&quot; &quot;196&quot; &quot;198&quot; &quot;213&quot; &quot;244&quot; &quot;275&quot; &quot;276&quot; &quot;381&quot; &quot;388&quot; &quot;389&quot; &quot;401&quot;
 ## [12] &quot;453&quot; &quot;562&quot; &quot;592&quot; &quot;714&quot; &quot;724&quot; &quot;729&quot; &quot;780&quot; &quot;781&quot; &quot;787&quot; &quot;789&quot; &quot;V58&quot;</code></pre>
 <p>Now we look at one of the trees with root “388”. The tree is represented using an adjacency matrix. Denote this matrix as <span class="math inline">\(M\)</span>. <span class="math inline">\(M_{jk} = 1\)</span> if the <span class="math inline">\(k\)</span>-th node is a child of the <span class="math inline">\(j\)</span>-th node. Hence, each rowSum equals the number of children the corresponding node has. Each column has at most one 1.</p>
 <pre class="r"><code>diagnosisInformation$trees$`388`</code></pre>
-<pre><code>## 15 x 15 sparse Matrix of class &quot;dtCMatrix&quot;</code></pre>
-<pre><code>##    [[ suppressing 15 column names '388', '3880', '3883' ... ]]</code></pre>
-<pre><code>##                                    
-## 388   . 1 1 1 1 1 1 . . . . . . . .
-## 3880  . . . . . . . 1 . . . . . . .
-## 3883  . . . . . . . . 1 1 . . . . .
-## 3884  . . . . . . . . . . 1 1 . . .
-## 3887  . . . . . . . . . . . . 1 1 1
-## 3882  . . . . . . . . . . . . . . .
-## 3888  . . . . . . . . . . . . . . .
-## 38801 . . . . . . . . . . . . . . .
-## 38830 . . . . . . . . . . . . . . .
-## 38831 . . . . . . . . . . . . . . .
-## 38843 . . . . . . . . . . . . . . .
-## 38845 . . . . . . . . . . . . . . .
-## 38870 . . . . . . . . . . . . . . .
-## 38871 . . . . . . . . . . . . . . .
-## 38872 . . . . . . . . . . . . . . .</code></pre>
+<pre><code>## 28 x 28 sparse Matrix of class &quot;dtCMatrix&quot;
+##                                                              
+##  [1,] . 1 1 1 1 1 1 1 1 1 1 . . . . . . . . . . . . . . . . .
+##  [2,] . . . . . . . . . . . 1 1 . . . . . . . . . . . . . . .
+##  [3,] . . . . . . . . . . . . . 1 . . . . . . . . . . . . . .
+##  [4,] . . . . . . . . . . . . . . 1 1 1 . . . . . . . . . . .
+##  [5,] . . . . . . . . . . . . . . . . . 1 1 1 1 . . . . . . .
+##  [6,] . . . . . . . . . . . . . . . . . . . . . 1 1 1 . . . .
+##  [7,] . . . . . . . . . . . . . . . . . . . . . . . . 1 1 1 .
+##  [8,] . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+##  [9,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [10,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [11,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [12,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [13,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [14,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [15,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [16,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [17,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [18,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [19,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [20,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [21,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [22,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [23,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [24,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [25,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [26,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [27,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## [28,] . . . . . . . . . . . . . . . . . . . . . . . . . . . .</code></pre>
 <p>Here is the vector of all nodes in the tree with root “388”. This vector contains the row names of the sparse matrix above.</p>
 <pre class="r"><code>diagnosisInformation$nodes$`388`</code></pre>
-<pre><code>##  [1] &quot;388&quot;   &quot;3880&quot;  &quot;3883&quot;  &quot;3884&quot;  &quot;3887&quot;  &quot;3882&quot;  &quot;3888&quot;  &quot;38801&quot;
-##  [9] &quot;38830&quot; &quot;38831&quot; &quot;38843&quot; &quot;38845&quot; &quot;38870&quot; &quot;38871&quot; &quot;38872&quot;</code></pre>
+<pre><code>##                                              &lt;NA&gt; 
+##                                             &quot;388&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3880&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3881&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3883&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3884&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3886&quot; 
+##                                              &lt;NA&gt; 
+##                                            &quot;3887&quot; 
+##                            Other disorders of ear 
+##                                            &quot;3888&quot; 
+##                  Sudden hearing loss, unspecified 
+##                                            &quot;3882&quot; 
+##                       Disorders of acoustic nerve 
+##                                            &quot;3885&quot; 
+##                       Unspecified disorder of ear 
+##                                            &quot;3889&quot; 
+##  Degenerative and vascular disorders, unspecified 
+##                                           &quot;38800&quot; 
+##                                      Presbyacusis 
+##                                           &quot;38801&quot; 
+##                        Noise-induced hearing loss 
+##                                           &quot;38812&quot; 
+##                             Tinnitus, unspecified 
+##                                           &quot;38830&quot; 
+##                               Subjective tinnitus 
+##                                           &quot;38831&quot; 
+##                                Objective tinnitus 
+##                                           &quot;38832&quot; 
+##         Abnormal auditory perception, unspecified 
+##                                           &quot;38840&quot; 
+##                                       Hyperacusis 
+##                                           &quot;38842&quot; 
+##             Impairment of auditory discrimination 
+##                                           &quot;38843&quot; 
+##             Acquired auditory processing disorder 
+##                                           &quot;38845&quot; 
+##                             Otorrhea, unspecified 
+##                                           &quot;38860&quot; 
+##                      Cerebrospinal fluid otorrhea 
+##                                           &quot;38861&quot; 
+##                                    Other otorrhea 
+##                                           &quot;38869&quot; 
+##                              Otalgia, unspecified 
+##                                           &quot;38870&quot; 
+##                                     Otogenic pain 
+##                                           &quot;38871&quot; 
+##                            Referred otogenic pain 
+##                                           &quot;38872&quot; 
+##                                              &lt;NA&gt; 
+##                                           &quot;38881&quot;</code></pre>
 <p>The <em>counts</em> vector counts how many times patient “802666500100523” was diagnosed with each node in the tree with root “388”. The counting follows the rule that if a 4/5-digit ICD-9 code is present (node = 1), then the corresponding 3/4-digit ICD-9 code is present.</p>
 <pre class="r"><code>diagnosisInformation$counts$`802666500100523:388`</code></pre>
-<pre><code>##  [1] 4 0 0 1 2 1 1 0 0 0 1 1 0 0 0</code></pre>
+<pre><code>##  [1] 4 0 0 0 0 0 1 2 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0</code></pre>
 
 
 

@@ -29,9 +29,7 @@ medical_test <- medicalInpatient[1:10000,]
 medical_test <- medical_test[order(patid, fst_dt, lst_dt)]
 
 # obtain admission dates and lengths of stay
-confinement <- diagData[source == "confinement.inpatient",
-                        .(patid, index_dt, conf_id, fst_dt, lst_dt, 
-                          charge, copay, pos, description, category)]
+confinement <- diagData[source == "confinement.inpatient", ]
 
 rm(diagData)
 

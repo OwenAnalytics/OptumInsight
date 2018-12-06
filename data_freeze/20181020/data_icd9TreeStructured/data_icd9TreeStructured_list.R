@@ -10,7 +10,7 @@
 #' 
 #' Created: 11/24/2018
 #' 
-#' Revisions:
+#' Revisions: 12/06/2018 - Add names of the ICD-9 codes
 ##################################################
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured")
@@ -201,7 +201,51 @@ rm(list=setdiff(ls(), "diagnosisInformation"))
 save(diagnosisInformation, file="diagnosisInformation.RData")
 
 
-# library(Matrix)
-# load("diagnosisInformation_500patients.RData")
+
+
+
+### 12/06/2018 revision: add names of the ICD-9 codes to the list ------------------
+#' Using ICD-9 Version 32 Full and Abbreviated Code Titles 
+#'   Effective October 1, 2014
+#' There are no new ICD-9-CM code updates effective October 1, 2014.
+#' Reference: https://www.cms.gov/Medicare/Coding/ICD9ProviderDiagnosticCodes/addendum.html
+
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured")
+
+library(Matrix)
+library(xlsx)
+
+load("diagnosisInformation_500patients.RData")
+
+codeNames <- data.table(readLines("ICD-9-CM-v32-master-descriptions/CMS32_DESC_LONG_DX.txt"))
+
+## separate icd-9 codes and names
+#' ^: matches the start of the string
+#' (...): grouping in regular expressions. 
+#'   Each group can than be refer using \\N, with N being the No. of (...) used
+#' \w: word characters, equivalent to [[:alnum:]_] or [A-z0-9_]
+#' \s: space, ` `
+#' .: matches any single character
+#' +: matches at least 1 times
+codeNames$code <- sub('(^\\w+)\\s.+','\\1', codeNames$V1)
+codeNames$name <- sub('(^\\w+)(\\s.+)','\\2', codeNames$V1)
+codeNames$V1 <- NULL
+
+# add names
+for(node in names(diagnosisInformation$nodes)){
+  nodesInTree <- diagnosisInformation$nodes[[node]]
+  names(nodesInTree) <- codeNames$name[match(nodesInTree, codeNames[, code])]
+  diagnosisInformation$nodes[[node]] <- nodesInTree
+}
+
+save(diagnosisInformation, file="diagnosisInformation_list.RData")
+
+
+
+
+
+
+
+
 
 
