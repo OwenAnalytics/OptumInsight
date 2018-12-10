@@ -10,7 +10,9 @@
 #' 
 #' Created: 11/24/2018
 #' 
-#' Revisions: 12/06/2018 - Add names of the ICD-9 codes
+#' Revisions: 
+#' 12/06/2018 - 1. Add names of the ICD-9 codes;
+#'  2. Find out diagnosis codes that are not available in the ICD-9 dictionary
 ##################################################
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured")
@@ -23,18 +25,26 @@ library(data.tree)
 library(Matrix)
 
 ## read in medical claims data --------------------------------------------------
-medical <- fread("../diagData_20181020_freeze.csv",
+medical0 <- fread("../diagData_20181020_freeze.csv",
                  colClasses = list(character = 1:73))
 
 # keep diagnoses after index VTE
-medical <- medical[fst_dt >= index_dt &
+medical <- medical0[fst_dt >= index_dt &
                      fst_dt < as.Date("2015-10-01") &
                      source %in% c("medical.outpatient", "medical.inpatient"), ]
 medical$source <- NULL
 
+confinement <- medical0[fst_dt >= index_dt &
+                         fst_dt < as.Date("2015-10-01") &
+                         source == "confinement.inpatient" &
+                         (! patid %in% unique(medical$patid)), ]
+confinement$source <- NULL
+
+rm(medical0)
+
 
 ## create a subset data
-# medical <- medical[1:10000,]
+# medical <- medical[patid %in% patientIndx,]
 
 # only want patient ID and diagnoses
 # ignore diagnosis date and pos
@@ -57,6 +67,27 @@ medical_long <- melt(medical,
                       na.rm = TRUE)
 rm(medical)
 
+## repeat the same procedures for confinement data
+diag_names <- grep("diag", colnames(confinement), value = TRUE)
+diag.vars <- c("patid", diag_names)
+confinement <- confinement[, diag.vars, with=FALSE]
+
+#' replace trivial values with NA
+#' Trivial values include: "" (blank), only having 0's in codes
+for (j in diag_names) 
+  set(confinement, j = j, value = gsub("^$|-|^0{3,5}$", NA, confinement[[j]]))
+
+# transform into long format
+confinement_long <- melt(confinement,
+                     id.vars = c("patid"),
+                     measure.vars = diag_names,
+                     value.name = "icd9_raw",
+                     variable.name = "diag",
+                     na.rm = TRUE)
+rm(confinement)
+
+medical_long <- rbind(medical_long, confinement_long)
+
 # count the number of occurrences of each diagnosis in each patient
 medical_long[, diag := NULL]
 medical_long[, N_diag := .N, by = c("patid", "icd9_raw")]
@@ -72,6 +103,9 @@ medical_long <- medical_long[order(patid, icd9_raw), ]
 #'  supplemental classification
 #' V codes format: VXX(.XX)
 #' E codes format: EXXX(.X)
+# only want ICD-9 codes
+medical_long <- medical_long[substr(icd9_raw, 1, 1) %in% c(0:9, "E", "V")]
+
 medical_long$icd9_3digits <- with(medical_long,
     ifelse(substr(icd9_raw, 1, 1)=="E",
            substr(icd9_raw, 1, 4),
@@ -198,7 +232,7 @@ diagnosisInformation <- list(
 rm(list=setdiff(ls(), "diagnosisInformation"))
 
 
-save(diagnosisInformation, file="diagnosisInformation.RData")
+# save(diagnosisInformation, file="diagnosisInformation.RData")
 
 
 
@@ -210,12 +244,12 @@ save(diagnosisInformation, file="diagnosisInformation.RData")
 #' There are no new ICD-9-CM code updates effective October 1, 2014.
 #' Reference: https://www.cms.gov/Medicare/Coding/ICD9ProviderDiagnosticCodes/addendum.html
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured")
-
-library(Matrix)
-library(xlsx)
-
-load("diagnosisInformation_500patients.RData")
+# setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9TreeStructured")
+# 
+# library(Matrix)
+# library(xlsx)
+# 
+# load("diagnosisInformation_list.RData")
 
 codeNames <- data.table(readLines("ICD-9-CM-v32-master-descriptions/CMS32_DESC_LONG_DX.txt"))
 
@@ -238,7 +272,31 @@ for(node in names(diagnosisInformation$nodes)){
   diagnosisInformation$nodes[[node]] <- nodesInTree
 }
 
-save(diagnosisInformation, file="diagnosisInformation_list.RData")
+save(diagnosisInformation, file="diagnosisInformation_list_12062018.RData")
+
+
+
+
+
+
+
+### Find out diagnosis codes that are not available in the ICD-9 dictionary --------
+allDiagICD9 <- allDiag[substr(icd9_3digits, 1, 1) %in% c(0:9, "E", "V")]
+allDiagICD9$is.found3 <- allDiagICD9$icd9_3digits %in% codeNames$code
+allDiagICD9$is.found4 <- allDiagICD9$icd9_4digits %in% codeNames$code
+allDiagICD9$is.found5 <- allDiagICD9$icd9_5digits %in% codeNames$code
+
+allDiagICD9$is.found <- apply(allDiagICD9[, 4:6], 1, any)
+
+# total number of unique diagnosis codes, regardless of levels
+nrow(allDiagICD9)
+
+# number of diagnosis codes that are not found in ICD-9 dictionary
+sum(!allDiagICD9$is.found)
+
+
+
+
 
 
 

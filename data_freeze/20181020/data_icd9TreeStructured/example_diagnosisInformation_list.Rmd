@@ -14,12 +14,20 @@ library(data.table)
 library(reshape2)
 library(data.tree)
 library(Matrix)
+library(knitr)
 ```
 
-This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list_500patients.R. 
+This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list.R. 
   
-We consider both inpatient and outpatient diagnoses from medical claims data, obtained from rows in `diagData_20181020_freeze.csv` that have `source %in% ("medical.inpatient", "medical.outpatient")`. The diagnoses range from 2007-01-01 to 2015-09-30. All diagnoses, regardless of being before or after index VTE date, are included. The `diagnosisInformation.RData` contains a list named diagnosisInformation of 500 patients. 
+We consider both inpatient and outpatient diagnoses from medical claims data, obtained from rows in `diagData_20181020_freeze.csv` that have `source %in% ("medical.inpatient", "medical.outpatient")`. The diagnoses range from individual index VTE dates to 2015-09-30. All diagnoses, regardless of being before or after index VTE date, are included. The `diagnosisInformation_list.RData` contains a list named diagnosisInformation of 14,883 patients. 
 
+Patient counts:
+
+- 14,945 = total number of patients in our study cohort. These patients satisfy all inclusion/exclusion criteria. 
+- 14,883 = number of patients in our study cohort who had at least one diagnosis in medical claims before 2015-09-30. The 14945 - 14883 = 62 excluded patients did not have any diagnoses in medical claims before 2015-09-30, although they might have outpatient pharmacy claims after 2015-10-01.
+- 14,932 = number of patients in our study cohort who had at least one diagnosis in either medical or confinement claims before 2015-09-30. The 14932 - 14883 = 49 patients had only confinement claims but no medical claims before 2015-09-30.
+
+Some diagnosis codes before 2015-09-30 are also ICD-10. This is strange.
 
 The list contains:
 
@@ -53,6 +61,37 @@ The _counts_ vector counts how many times patient "802666500100523" was diagnose
 ```{r}
 diagnosisInformation$counts$`802666500100523:388`
 ```
+
+
+
+Here are some diagnosis codes that are not available from the ICD-9 code dictionary.
+```{r}
+diagnosisInformation$nodes$`198`
+diagnosisInformation$nodes$`174`
+diagnosisInformation$nodes$`401`
+```
+
+
+I would like to look at which patient has "4019Y".
+```{r results='asis'}
+n <- length(diagnosisInformation$nodes$`401`)
+indx <- which(diagnosisInformation$roots == "401")
+patientIndx <- diagnosisInformation$patients[indx]
+countIndx <- diagnosisInformation$counts[indx]
+
+patientsToPrint <- c()
+for (j in 1:length(patientIndx)){
+  diagCounts <- diagnosisInformation$counts[indx[j]]
+  if (diagCounts[[1]][n] > 0) {
+    patientsToPrint <- c(patientsToPrint,
+                         diagnosisInformation$patients[indx[j]])
+  }
+}
+patientsToPrint
+```
+
+
+
 
 
 

@@ -122,8 +122,15 @@ $(document).ready(function () {
 </div>
 
 
-<p>This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list_500patients.R.</p>
-<p>We consider both inpatient and outpatient diagnoses from medical claims data, obtained from rows in <code>diagData_20181020_freeze.csv</code> that have <code>source %in% (&quot;medical.inpatient&quot;, &quot;medical.outpatient&quot;)</code>. The diagnoses range from 2007-01-01 to 2015-09-30. All diagnoses, regardless of being before or after index VTE date, are included. The <code>diagnosisInformation.RData</code> contains a list named diagnosisInformation of 500 patients.</p>
+<p>This file shows an example of diagnosisInformation.RData, output from data_icd9TreeStructured_list.R.</p>
+<p>We consider both inpatient and outpatient diagnoses from medical claims data, obtained from rows in <code>diagData_20181020_freeze.csv</code> that have <code>source %in% (&quot;medical.inpatient&quot;, &quot;medical.outpatient&quot;)</code>. The diagnoses range from 2007-01-01 to 2015-09-30. All diagnoses, regardless of being before or after index VTE date, are included. The <code>diagnosisInformation_list.RData</code> contains a list named diagnosisInformation of 14,883 patients.</p>
+<p>Patient counts:</p>
+<ul>
+<li>14,945 = total number of patients in our study cohort. These patients satisfy all inclusion/exclusion criteria.</li>
+<li>14,883 = number of patients in our study cohort who had at least one diagnosis in medical claims before 2015-09-30. The 14945 - 14883 = 62 excluded patients did not have any diagnoses in medical claims before 2015-09-30, although they might have outpatient pharmacy claims after 2015-10-01.</li>
+<li>14,932 = number of patients in our study cohort who had at least one diagnosis in either medical or confinement claims before 2015-09-30. The 14932 - 14883 = 49 patients had only confinement claims but no medical claims before 2015-09-30.</li>
+</ul>
+<p>Some diagnosis codes before 2015-09-30 are also ICD-10. This is strange.</p>
 <p>The list contains:</p>
 <ul>
 <li><em>patients</em> = a character vector of patient ids</li>
@@ -232,6 +239,90 @@ diagnosisInformation$roots[testIndex]</code></pre>
 <p>The <em>counts</em> vector counts how many times patient “802666500100523” was diagnosed with each node in the tree with root “388”. The counting follows the rule that if a 4/5-digit ICD-9 code is present (node = 1), then the corresponding 3/4-digit ICD-9 code is present.</p>
 <pre class="r"><code>diagnosisInformation$counts$`802666500100523:388`</code></pre>
 <pre><code>##  [1] 4 0 0 0 0 0 1 2 1 1 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0</code></pre>
+<p>Here are some diagnosis codes that are not available from the ICD-9 code dictionary.</p>
+<pre class="r"><code>diagnosisInformation$nodes$`198`</code></pre>
+<pre><code>##                                                            &lt;NA&gt; 
+##                                                           &quot;198&quot; 
+##                                                            &lt;NA&gt; 
+##                                                          &quot;1988&quot; 
+##                          Secondary malignant neoplasm of kidney 
+##                                                          &quot;1980&quot; 
+##            Secondary malignant neoplasm of other urinary organs 
+##                                                          &quot;1981&quot; 
+##                            Secondary malignant neoplasm of skin 
+##                                                          &quot;1982&quot; 
+##           Secondary malignant neoplasm of brain and spinal cord 
+##                                                          &quot;1983&quot; 
+##   Secondary malignant neoplasm of other parts of nervous system 
+##                                                          &quot;1984&quot; 
+##            Secondary malignant neoplasm of bone and bone marrow 
+##                                                          &quot;1985&quot; 
+##                           Secondary malignant neoplasm of ovary 
+##                                                          &quot;1986&quot; 
+##                   Secondary malignant neoplasm of adrenal gland 
+##                                                          &quot;1987&quot; 
+##                                                            &lt;NA&gt; 
+##                                                          &quot;1989&quot; 
+##                          Secondary malignant neoplasm of breast 
+##                                                         &quot;19881&quot; 
+##                  Secondary malignant neoplasm of genital organs 
+##                                                         &quot;19882&quot; 
+##           Secondary malignant neoplasm of other specified sites 
+##                                                         &quot;19889&quot;</code></pre>
+<pre class="r"><code>diagnosisInformation$nodes$`174`</code></pre>
+<pre><code>##                                                           &lt;NA&gt; 
+##                                                          &quot;174&quot; 
+##    Malignant neoplasm of upper-inner quadrant of female breast 
+##                                                         &quot;1742&quot; 
+##   Malignant neoplasm of other specified sites of female breast 
+##                                                         &quot;1748&quot; 
+##             Malignant neoplasm of breast (female), unspecified 
+##                                                         &quot;1749&quot; 
+##       Malignant neoplasm of nipple and areola of female breast 
+##                                                         &quot;1740&quot; 
+##         Malignant neoplasm of central portion of female breast 
+##                                                         &quot;1741&quot; 
+##    Malignant neoplasm of lower-inner quadrant of female breast 
+##                                                         &quot;1743&quot; 
+##    Malignant neoplasm of upper-outer quadrant of female breast 
+##                                                         &quot;1744&quot; 
+##    Malignant neoplasm of lower-outer quadrant of female breast 
+##                                                         &quot;1745&quot; 
+##           Malignant neoplasm of axillary tail of female breast 
+##                                                         &quot;1746&quot; 
+##                                                           &lt;NA&gt; 
+##                                                        &quot;17427&quot; 
+##                                                           &lt;NA&gt; 
+##                                                        &quot;17480&quot; 
+##                                                           &lt;NA&gt; 
+##                                                        &quot;17490&quot; 
+##                                                           &lt;NA&gt; 
+##                                                        &quot;17497&quot;</code></pre>
+<pre class="r"><code>diagnosisInformation$nodes$`401`</code></pre>
+<pre><code>##                                 &lt;NA&gt;     Malignant essential hypertension 
+##                                &quot;401&quot;                               &quot;4010&quot; 
+##   Unspecified essential hypertension        Benign essential hypertension 
+##                               &quot;4019&quot;                               &quot;4011&quot; 
+##                                 &lt;NA&gt;                                 &lt;NA&gt; 
+##                              &quot;40101&quot;                              &quot;40190&quot; 
+##                                 &lt;NA&gt; 
+##                              &quot;4019Y&quot;</code></pre>
+<p>I would like to look at which patient has “4019Y”.</p>
+<pre class="r"><code>n &lt;- length(diagnosisInformation$nodes$`401`)
+indx &lt;- which(diagnosisInformation$roots == &quot;401&quot;)
+patientIndx &lt;- diagnosisInformation$patients[indx]
+countIndx &lt;- diagnosisInformation$counts[indx]
+
+patientsToPrint &lt;- c()
+for (j in 1:length(patientIndx)){
+  diagCounts &lt;- diagnosisInformation$counts[indx[j]]
+  if (diagCounts[[1]][n] &gt; 0) {
+    patientsToPrint &lt;- c(patientsToPrint,
+                         diagnosisInformation$patients[indx[j]])
+  }
+}
+patientsToPrint</code></pre>
+<p>[1] “802666511070237”</p>
 
 
 

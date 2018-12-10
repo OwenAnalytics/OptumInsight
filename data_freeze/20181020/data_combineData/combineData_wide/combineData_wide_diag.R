@@ -348,6 +348,24 @@ write.csv(final, "diagData_20181020_freeze.csv",
 
 
 
+### !!! Current problem : --------------------------------------------------
+# the number of patients in the data is less than 14932
+# checking whether some patients were left out becuase they only appeared
+#   in confinement claims
+
+### read in confinement data 
+confinement <- fread("../separateData/confinementClaims.txt",
+                     colClasses = list(character = c("patid")))
+colnames(confinement) <- tolower(colnames(confinement))
+length(setdiff(confinement$patid, patients))
+
+
+testIndex <- which(diagnosisInformation$patients=="802666500100523")
+diagnosisInformation$roots[testIndex]
+
+
+
+
 
 
 # ### Check whether different levels of the same ICD9 code may appear  --------
