@@ -226,13 +226,13 @@ print(patternInformation[1:10, 1:10])
 ## counts
 individualTables <- data.table(individualTables)
 colnames(individualTables)[2:5] <- paste("length", c(0,3:5), sep = "")
-individualTables <- individualTables[order(-length4, patid),]
+individualTables <- individualTables[order(-length4, -length5, -length3),]
 
 col_set <- c("green", "red", "blue")
 pdf("results_individuals_counts.pdf", width=100, height=5)
 matplot((individualTables[, 3:5]), type="l", lty = "solid", lwd = 0.5, xaxt='n',
         col = col_set, xlab = "Patients", ylab = "Counts",
-        main = "Counts of diagnosis codes for individuals")
+        main = "Counts of diagnosis codes for individuals (ordered by levels 4, 5, and 3)")
 axis(1, at=1:(nrow(individualTables)),
      labels = rownames(individualTables), cex.axis=0.5, srt=45)
 legend("topleft", colnames(individualTables)[3:5], col = col_set,
@@ -242,13 +242,14 @@ dev.off()
 
 ## proportions
 individualTables <- data.table(individualTables)
-individualTables <- individualTables[order(-prop_individual4, patid),]
+individualTables <- individualTables[
+  order(-prop_individual4, -prop_individual5, -prop_individual3),]
 
 col_set <- c("green", "red", "blue")
 pdf("results_individuals_proportions.pdf", width=100, height=5)
 matplot((individualTables[, 7:9]), type="l", lty = "solid", lwd = 0.5, xaxt='n',
         col = col_set, xlab = "Patients", ylab = "Counts",
-        main = "Proportioins of diagnosis codes for individuals")
+        main = "Proportioins of diagnosis codes for individuals (ordered by levels 4, 5, and 3)")
 axis(1, at=1:(nrow(individualTables)),
      labels = rownames(individualTables), cex.axis=0.5, srt=45)
 legend("topleft", colnames(individualTables)[7:9], col = col_set,
@@ -262,13 +263,13 @@ dev.off()
 ## counts
 codeTables <- data.table(codeTables)
 colnames(codeTables)[1:4] <- paste("length", c(0,3:5), sep = "")
-codeTables <- codeTables[order(-length4, pattern),]
+codeTables <- codeTables[order(-length4, -length5, -length3),]
 
 col_set <- c("green", "red", "blue")
 pdf("results_codes_counts.pdf", width=100, height=5)
 matplot(codeTables[, 2:4], type="l", lty = "solid", lwd = 0.5, xaxt='n',
         col = col_set, xlab = "Codes", ylab = "Counts",
-        main = "Counts of diagnosis codes at different levels")
+        main = "Counts of diagnosis codes at different levels (ordered by levels 4, 5, and 3)")
 axis(1, at=1:(nrow(codeTables)),
      labels = codeTables$pattern, cex.axis=0.5, srt=45)
 legend("topleft", colnames(codeTables)[2:4], col = col_set,
@@ -284,7 +285,7 @@ col_set <- c("green", "red", "blue")
 pdf("results_codes_proportions.pdf", width=100, height=5)
 matplot(codeTables[, 6:8], type="l", lty = "solid", lwd = 0.5, xaxt='n',
         col = col_set, xlab = "Patients", ylab = "Counts",
-        main = "Proportioins of diagnosis codes at different levels")
+        main = "Proportioins of diagnosis codes at different levels (ordered by levels 4, 5, and 3)")
 axis(1, at=1:(nrow(codeTables)),
      labels = rownames(codeTables), cex.axis=0.5, srt=45)
 legend("topleft", colnames(codeTables)[6:8], col = col_set,
