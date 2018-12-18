@@ -272,7 +272,7 @@ for(node in names(diagnosisInformation$nodes)){
   diagnosisInformation$nodes[[node]] <- nodesInTree
 }
 
-save(diagnosisInformation, file="diagnosisInformation_list_12062018.RData")
+save(diagnosisInformation, file="diagnosisInformation_list.RData")
 
 
 
