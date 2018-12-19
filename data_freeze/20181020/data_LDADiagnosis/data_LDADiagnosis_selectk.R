@@ -68,30 +68,3 @@ FindTopicsNumber_plot(topic_number_diagnosis)
 
 rm(list=setdiff(ls(), c("topic_number_diagnosis", "diagnosisText_dtm")))
 save(file="data_LDADiagnosis_selectk.RData")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
