@@ -71,11 +71,37 @@ confinementAfterVTE_firstAdmit <-
 cox.model <- coxph(Surv(admit_daysAfterVTE, admit) ~
         los + age + male + charge + cluster(patid),
       confinementAfterVTE_firstAdmit)
+
+cox.model <- coxph(Surv(admit_daysAfterVTE, admit) ~
+                     los + age + male + charge,
+                   confinementAfterVTE_firstAdmit)
+cox.model
+# Call:
+#   coxph(formula = Surv(admit_daysAfterVTE, admit) ~ los + age + 
+#           male + charge + cluster(patid), data = confinementAfterVTE_firstAdmit)
+# 
+# coef  exp(coef)   se(coef)  robust se      z      p
+# los    -1.997e-03  9.980e-01  8.934e-04  9.556e-04 -2.089 0.0367
+# age    -8.956e-04  9.991e-01  7.300e-04  7.333e-04 -1.221 0.2220
+# male    4.318e-03  1.004e+00  1.875e-02  1.841e-02  0.235 0.8146
+# charge  2.402e-09  1.000e+00  9.869e-08  9.361e-08  0.026 0.9795
+# 
+# Likelihood ratio test=8.11  on 4 df, p=0.0876
+# n= 11466, number of events= 11466 
+
+
 cox.ph <- cox.zph(cox.model)
 cox.ph
-# plot(cox.ph)
+# rho chisq        p
+# los     0.0398 29.67 5.13e-08
+# age    -0.0600 41.10 1.45e-10
+# male    0.0249  6.85 8.85e-03
+# charge -0.0253  5.35 2.07e-02
+# GLOBAL      NA 78.45 3.71e-16
 
 
+
+#' DO NOT RUN
 ### Using frailtypack to fit recurrent admissions ---------------------------
 library(frailtypack)
 

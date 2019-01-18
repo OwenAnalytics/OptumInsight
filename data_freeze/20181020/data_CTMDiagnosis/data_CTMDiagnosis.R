@@ -15,7 +15,7 @@
 #'  2. Find out diagnosis codes that are not available in the ICD-9 dictionary
 ##################################################
 
-setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_LDADiagnosis")
+setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_CTMDiagnosis")
 
 library(dplyr)
 library(tidyr)
@@ -31,8 +31,7 @@ library(purrr)
 library(gridExtra)
 
 
-load("diagnosisLDA.RData")
-# load("diagnosis_TM.RData")
+load("diagnosisCTM.RData")
 
 
 ### get 3-digit ICD-9 code names --------------------------
@@ -42,152 +41,119 @@ colnames(codeList)[1] <- "term"
 codeList$term <- tolower(codeList$term)
 
 
-### find the most common terms within topics ------------------------------
 n <- 10 # top n topics
 
-nModels <- length(diagnosisLDA) # number of models
-
-pdf("data_LDADiagnosis_plots.pdf", width = 30, height = 15)
-for (j in 1:nModels){
-  # get the model
-  ldaModel <- diagnosisLDA[[j]]
-  k <- ldaModel@k
-  assignedname <- paste("lda", k, "_beta", sep="")
-  assign(assignedname, tidy(ldaModel, matrix = "beta"))
-  
-  # add icd9 names to terms
-  assign(assignedname, merge(x = get(assignedname), y = codeList, 
-                    by = "term", all.x = TRUE))
-  
-  # plot
-  topTerms <- get(assignedname) %>%
-    group_by(topic) %>%
-    top_n(n, beta) %>%
-    ungroup() %>%
-    arrange(topic, -beta) %>%
-    mutate(id = rep(1:n, k)) %>%
-    mutate(term = reorder(term, -id)) 
-  
-  alpha <- ldaModel@alpha
-  print(topTerms %>%
-    ggplot(mapping = aes(term, beta, label = name)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(~ topic, scales = "free") +
-    geom_bar(stat="identity", color="grey4",
-      fill="salmon", position="dodge") +
-    geom_text(angle=0, hjust=0.6, size = 3, nudge_x = 0.1) +
-    coord_flip() +
-    labs(title = 
-        paste("The most common ICD-9 codes within each topic using ",
-              ldaModel@call[1], " with k=", k, ", alpha=", alpha, sep="")) +
-    theme(plot.title = element_text(size=28),
-          axis.title.x = element_text(size=20),
-          axis.title.y = element_text(size=20)) +
-    ylab("Per-topic-per-word probability") +
-    xlab("ICD-9 code"))
-}
-
-dev.off()
-
-
-
-
-
-
+nModels <- length(diagnosisCTM) # number of models
 
 ### Document-topic probabilities --------------------------------------------
-
-## Gibbs
-patients_Gibbs <- tidy(diagnosis_TM[["Gibbs"]], matrix = "gamma")
-
-# extract estimated posterior distributions of icd-9 codes for 20 patients
-patients_Gibbs_20 <- patients_Gibbs[patients_Gibbs$document == 1,]
-
-for(doc in 2:20) {
-  patients_Gibbs_20 <- 
-    rbind(patients_Gibbs_20, 
-          patients_Gibbs[patients_Gibbs$document == doc,])
+toptopics_prob <- c()
+k_vector <- c()
+alpha_vector <- c()
+for (j in 1:nModels){
+  # get the model
+  CTMModel <- diagnosisCTM[[j]]
+  k <- CTMModel@k
+  CTM_gamma <- as.data.frame(CTMModel@gamma)
+  names(CTM_gamma) <- 1:k
+  
+  # get the most likely topic for each patient --------------------------
+  toptopics <- as.data.frame(cbind(document = row.names(CTM_gamma), 
+                                   topic = apply(CTM_gamma, 1, 
+                                                 function(x) names(CTM_gamma)[which(x==max(x))])))
+  for(kk in 1:k){
+    toptopics[, ncol(toptopics)+1] <- as.integer(grepl(kk, toptopics$topic))
+    colnames(toptopics)[ncol(toptopics)] <- paste("topic", kk, sep="")
+  }
+  print(barplot(colSums(toptopics[,3:ncol(toptopics)]),
+                main = 
+                  paste("Distribution of the most likely topics of patients when k=",
+                        k, sep=""),
+                ylab = "Count"))
+  
+  k_vector <- c(k_vector, k)
+  alpha_vector <- c(alpha_vector, alpha)
+  
+  
+  # get the probability of the most likely topic ------------------------
+  toptopics_prob <- cbind(toptopics_prob, apply(CTM_gamma, 1, max))
+  colnames(toptopics_prob)[ncol(toptopics_prob)] <- paste("k=", k, sep="")
 }
-patients_Gibbs_20$topic <- factor(patients_Gibbs_20$topic)
 
-patients_Gibbs_20 %>%
-  ggplot(aes(document, gamma, fill = topic)) +
-  geom_bar(stat = "identity", position = 'stack') +
-  coord_flip() +
-  labs(title = paste("The most common ICD-9 codes within each topic
-    using Gibbs estimation with alpha=", diagnosis_TM$Gibbs@alpha, sep="")) +
-  theme(text = element_text(size = 15)) +
-  ylab("Per-patient-per-topic probability") +
-  xlab("Patient")
-ggsave("k10_DocumentTopic_Gibbs.pdf",
-       width = 40, height = 20, units = "cm")
-
-
-
-### The most likely topic assignment of each document -----------------------
-gammaDF <- as.data.frame(diagnosis_TM$Gibbs@gamma) 
-names(gammaDF) <- c(1:k)
-
-# inspect...
-toptopics <- as.data.frame(cbind(document = row.names(gammaDF), 
-            topic = apply(gammaDF,1,function(x) names(gammaDF)[which(x==max(x))])))
-
-toptopics_prob <- lapply(patients_Gibbs, function(x) apply(x, 1, max))
-toptopics_prob <- do.call("cbind", toptopics_prob)
-toptopics_prob <- data.table(document = row.names(gammaDF), toptopics_prob)
-toptopics_prob[, 2:6] <- lapply(toptopics_prob[, 2:6], as.numeric)
+toptopics_prob <- data.table(document = 1:nrow(toptopics_prob), toptopics_prob)
 
 # transform wide to long
 toptopics_prob_long <- melt(toptopics_prob,
-                            id.vars = 1, measure.vars = 2:6,
+                            id.vars = 1, 
                             variable.name = "method", value.name = "prob")
+
 # plot top probabilities
-ggplot(data = toptopics_prob_long, aes(x = prob)) +
-  geom_histogram(aes(fill = method), alpha = 0.7, bins = 40) +
-  facet_grid(method~.) +
-  scale_fill_discrete(name="Method",
-                      labels=c("VEM: alpha = 0.022",
-                               "Gibbs: alpha = 1.67", 
-                               "Gibbs: alpha = 0.8",
-                               "Gibbs: alpha = 0.5",
-                               "Gibbs: alpha = 0.1")) +
-  labs(title = "Probability of assignment to the most likely topic",
-       x = "Probability", y = "Count") +
-  theme(text = element_text(size=10))
-# plot.title = element_text(size=18),
-# axis.title.x = element_text(size=15),
-# axis.title.y = element_text(size=15),
-# legend.title=element_text(size=18),
-# legend.text= element_text(size=18)
-ggsave("slides/prob_assignment_to_top_topics_histogram.pdf",
-       width = 6, height = 7)
+scale_labels <- paste0("k=", k_vector, ", alpha=", alpha)
+print(ggplot(data = toptopics_prob_long, aes(x = prob)) +
+        geom_histogram(aes(fill = method), alpha = 0.7, bins = 40) +
+        facet_grid(method~.) +
+        scale_fill_discrete(name = "Model",
+                            labels = scale_labels) +
+        labs(title = "Probability of assignment to the most likely topic",
+             x = "Probability", y = "Count") +
+        theme(text = element_text(size=10)))
 
 
 
 
 
 
-### Correlated topic model --------------------------------------------------
-k <- 10
-SEED <- 2018
-diagnosis_ctm <- CTM(diagnosisText_dtm, k = k,
-          control = list(seed = SEED,
-            var = list(tol = 10^-4), em = list(tol = 10^-3)))
 
 
-## Extract the gamma matrix containing the topic probabilities per document
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 tidy_ctm_gamma  <- function(CTM_object){
   CTM_object %>% 
     slot("gamma")  %>% 
     as_data_frame()  %>% 
-    mutate (document = row_number()) %>% 
+    mutate(document = row_number()) %>% 
     gather(topic, gamma, -document) %>%
     mutate(topic = strtoi(stringr::str_sub(topic,2)))
 }
 
 
+lemma_tm <- diagnosisCTM %>%
+  mutate(ctm_gamma = map(.x=ctm, .f=tidy_ctm_gamma))
 
-
+lemma_tm %>% 
+  unnest(ctm_gamma) %>% 
+  group_by(k, document) %>%
+  arrange(desc(gamma)) %>%
+  slice(1) %>%
+  #top_n(1, ctm_gamma) %>%
+  ungroup() %>% 
+  ggplot(aes(x=gamma, fill=factor(k))) +
+  geom_histogram(bins = 15) +
+  scale_fill_discrete(name = "Number of\nTopics") +
+  facet_wrap(~k) +
+  geom_vline(aes(xintercept = 1/k), 
+             tibble(k=lemma_tm %$% unique(k)),
+             color="darkred")
 
 
 
