@@ -1,0 +1,80 @@
+---
+title: "Summary of ICD-9 codes"
+author: "Mengbing Li"
+date: "January 18, 2019"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20190110/data_icd9Summary_individual')
+
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(knitr)
+library(ggplot2)
+library(Matrix)
+```
+
+
+Data description:
+
+
+
+```{r}
+# extract 3-digit ICD-9 codes
+source("../functions/icd9_hierarchy.R")
+diagInpatient <- fread("../diagInpatient_long.csv")
+diagInpatient$icd9_3digits <- icd9_3digits(diagInpatient, icd9_raw)
+diagInpatient$icd9_4digits <- icd9_4digits(diagInpatient, icd9_raw)
+diagInpatient$icd9_5digits <- icd9_5digits(diagInpatient, icd9_raw)
+
+# the number of unique ICD-9 codes at each level
+apply(diagInpatient[, c("icd9_3digits", "icd9_4digits", "icd9_5digits")], 2, function(x) length(unique(x)))
+```
+
+
+```{r}
+# count the number of times each ICD-9 code appears in each patient
+# and store the counts in a sparse matrix
+diagInpatientCount <- table(diagInpatient[, c("patid", "icd9_3digits")])
+diagInpatientCount <- Matrix(diagInpatientCount, sparse = TRUE)
+
+# number of patients that were admitted at least once, and number of unique inpatient 3-digit ICD-9 codes
+dim(diagInpatientCount)
+```
+
+```{r}
+# count the number of unique ICD-9 codes each patient has
+NUniqueCodeByPatient <- apply(diagInpatientCount, 1, function(x) sum(x>0))
+
+hist(NUniqueCodeByPatient, 
+     main = "Number of unique 3-digit ICD-9 codes in each patient after index VTE",
+     xlab = "Number of codes")
+```
+
+
+```{r}
+# The number of 3-digit ICD-9 codes for a patient on each day
+diagInpatientCountByDay <- c(table(paste(diagInpatient$patid, diagInpatient$fst_dt)))
+
+hist(diagInpatientCountByDay,
+     main = "Histogram of the number of 3-digit ICD-9 codes in one day",
+     xlab = "Count")
+
+summary(diagInpatientCountByDay)
+```
+
+
+
+
+
+
+
+
+
+
+
+

@@ -144,3 +144,17 @@ rm(confinementOnly)
 write.table(inpatient_long, "diagInpatient_long.csv",
             quote = FALSE, sep = ",", row.names = FALSE)
 rm(inpatient_long)
+
+
+# check: 
+diagInpatient <- fread("../diagInpatient_long.csv")
+table(diagInpatient$MedOrConf)
+
+diagOutpatient <- fread("../diagOutpatient_long.csv")
+table(diagOutpatient$MedOrConf)
+
+
+
+
+
+

@@ -11,14 +11,35 @@
 #' Revisions:
 ##################################################
 
-setwd('C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020/data_icd9Summary_individual')
+setwd('C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20190110/data_icd9Summary_individual')
 
 library(dplyr)
 library(tidyr)
 library(data.table)
-library(reshape2)
-library(data.tree)
 library(Matrix)
+
+# extract 3-digit ICD-9 codes
+source("../functions/icd9_hierarchy.R")
+diagInpatient <- fread("../diagInpatient_long.csv")
+diagInpatient$icd9_3digits <- icd9_3digits(diagInpatient, icd9_raw)
+
+# count the number of times each ICD-9 code appears in each patient
+# and store the counts in a sparse matrix
+diagInpatientCount <- table(diagInpatient[, c("patid", "icd9_3digits")])
+diagInpatientCount <- Matrix(diagInpatientCount, sparse = TRUE)
+
+# count the number of unique ICD-9 codes each patient has
+NUniqueCodeByPatient <- apply(diagInpatientCount, 1, function(x) sum(x>0))
+
+hist(NUniqueCodeByPatient, 
+     main = "Number of unique 3-digit ICD-9 codes in each patient after index VTE",
+     xlab = "Number of codes")
+
+
+
+
+
+
 
 ## read in medical claims data --------------------------------------------------
 medical0 <- fread("../diagData_20181020_freeze.csv",
