@@ -1,0 +1,179 @@
+---
+title: "Summary of Procedure codes"
+author: "Mengbing Li"
+date: "January 23, 2019"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20190110/data_procSummary')
+
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(knitr)
+library(ggplot2)
+library(Matrix)
+```
+
+
+The data file used in this summary is ``Box Sync\OptumInsight_DataManagement\data_freeze\20190110\procedures_long.csv``. 
+
+For an overview of the data, here is the number of unique CPT/HCPCS codes in our cohort data.
+```{r}
+procedures <- fread("../procedures_long.csv")
+
+length(unique(procedures$proc_cd))
+```
+
+We look at the length of the ICD-9 codes.
+```{r}
+test <- nchar(trimws(unique(diagInpatient$icd9_raw)))
+table(nchar(unique(diagInpatient$icd9_raw)))
+```
+
+
+
+## 1. 3-digit ICD-9 codes
+Since I am considering using the 3-digit ICD-9 codes, I do a summary specifically for this level.
+
+Count the number of patients that were admitted at least once, and number of unique inpatient 3-digit ICD-9 codes
+```{r}
+# count the number of times each ICD-9 code appears in each patient
+# and store the counts in a sparse matrix
+source("../functions/generateCountMatrix.R")
+diagInpatientCount <- generateCountMatrix(data = diagInpatient, x = "icd9_3digits", sparse = TRUE)
+
+dim(diagInpatientCount)
+```
+
+
+Count the number of unique ICD-9 codes each patient has between index VTE date and 2015-09-30.
+```{r}
+NUniqueCodeByPatient <- apply(diagInpatientCount, 1, function(x) sum(x>0))
+
+hist(NUniqueCodeByPatient, 
+     main = "Number of unique 3-digit ICD-9 codes in each patient after index VTE",
+     xlab = "Number of codes")
+```
+
+
+The number of 3-digit ICD-9 codes for a patient on each day.
+```{r}
+diagInpatientCountByDay <- c(table(paste(diagInpatient$patid, diagInpatient$fst_dt)))
+
+hist(diagInpatientCountByDay,
+     main = "Histogram of the number of 3-digit ICD-9 codes in one day",
+     xlab = "Count",
+     breaks = seq(1, max(diagInpatientCountByDay)+1))
+
+summary(diagInpatientCountByDay)
+```
+
+
+A diagnostic code may be recorded multiple times in a day simply because the patient went encountered doctors at different places of services such as ambulance and inpatient hospital. We suspect that the repetitive diagnostic codes provide little information about the disease progress of a patient or the relationship between diseases. Therefore we also look at the number of Unique 3-digit ICD-9 codes for a patient on each day. The uniqueness is identified by the combination of patid, fst\_dt, and ICD-9 code.
+```{r}
+diagInpatientUniqueInADay <- diagInpatient[!duplicated(diagInpatient[,.(patid, fst_dt, icd9_raw)]),]
+
+diagInpatientUniqueInADay.Count <- 
+  c(table(paste(diagInpatientUniqueInADay$patid, diagInpatientUniqueInADay$fst_dt)))
+
+hist(diagInpatientUniqueInADay.Count,
+     main = "Histogram of the number of unique 3-digit ICD-9 codes in one day",
+     xlab = "Count",
+     # xlim = range(1, max(diagInpatientUniqueInADay.Count)),
+     breaks = seq(1, max(diagInpatientUniqueInADay.Count)+1))
+
+summary(diagInpatientUniqueInADay.Count)
+```
+
+
+
+## 2. Summarize the tree-structure of ICD-9 codes
+
+Instead of looking at the ICD-9 codes from the original claims data, we strip the codes to look at different levels. We strip the 4-digit and 5-digit ICD-9 codes into lower levels, and count the number of unique ICD-9 codes at each level.
+```{r}
+apply(diagInpatient[, c("icd9_3digits", "icd9_4digits", "icd9_5digits")], 2, function(x) length(unique(x)))
+```
+
+
+Now we would like to obtain a description of the ICD-9 trees.
+```{r}
+GetNodeLength <- function(x){
+  length(unique(na.omit(x)))
+}
+
+icd9_3digits_unique <- unique(diagInpatient$icd9_3digits)
+icd9Tree_NodeCounts <- NULL
+for(j in icd9_3digits_unique){
+  subdata <- unique(diagInpatient[icd9_3digits==j, .(icd9_3digits, icd9_4digits, icd9_5digits)])
+  # change empty cells to NA
+  for (j in colnames(subdata)) 
+    set(subdata, j = j, value = gsub("^$|-|^0{3,5}$", NA, subdata[[j]]))
+  
+  # count the number of nodes at each level
+  subNodeCount <- c(1, GetNodeLength(subdata$icd9_4digits), GetNodeLength(subdata$icd9_5digits))
+  icd9Tree_NodeCounts <- rbind(icd9Tree_NodeCounts, subNodeCount)
+}
+
+icd9Tree_NodeCounts <- data.table( cbind(icd9_3digits_unique, icd9Tree_NodeCounts))
+rownames(icd9Tree_NodeCounts) <- 1:nrow(icd9Tree_NodeCounts)
+colnames(icd9Tree_NodeCounts) <- c("icd9_3digits", "N_3digit", "N_4digit", "N_5digit")
+icd9Tree_NodeCounts[, 2:4] <- lapply(icd9Tree_NodeCounts[, 2:4], as.integer)
+```
+
+
+We look at the size of the trees.
+
+First, the number of nodes in individual trees.
+```{r}
+col_set <- c("green", "red", "blue")
+pdf("results_TreeSizes.pdf", width=100, height=5)
+matplot(icd9Tree_NodeCounts[, 2:4], type="l", lty = "solid", lwd = 0.5, xaxt='n',
+        col = col_set, xlab = "ICD-9 codes", ylab = "Counts",
+        main = "The number of nodes in individual trees")
+axis(1, at=1:nrow(icd9Tree_NodeCounts),
+     labels = icd9Tree_NodeCounts$icd9_3digits, cex.axis=0.5, srt=45)
+legend("topleft", colnames(icd9Tree_NodeCounts)[2:4], col = col_set,
+       cex = 0.8, fill = col_set)
+dev.off()
+```
+
+
+
+Second, the frequency of tree patterns.
+```{r}
+# count the number of unique patterns 
+icd9Tree_UniquePattern <- unique(icd9Tree_NodeCounts[,-1][, patternCount := .N, by = .(N_3digit, N_4digit, N_5digit)])
+icd9Tree_UniquePattern <- icd9Tree_UniquePattern[order(N_3digit, N_4digit, N_5digit, patternCount), ]
+
+# transform data from wide to long
+icd9Tree_UniquePattern$ID <- 1:nrow(icd9Tree_UniquePattern)
+icd9Tree_UniquePattern_long <- melt(icd9Tree_UniquePattern,
+                                    id.vars = c("ID", "patternCount"),
+                                    measure.vars = c("N_3digit", "N_4digit", "N_5digit"),
+                                    value.name = "digits",
+                                    variable.name = "count")
+
+pdf("results_TreeSizePatterns.pdf", width=30, height=50)
+ggplot(data = icd9Tree_UniquePattern_long, 
+       aes(y = digits, x = count, group = ID)) +
+  geom_line(aes(color = patternCount, size = patternCount)) +
+  scale_color_gradient(low = "gray", high = "black") +
+  labs(title = "The number of nodes at each level in a ICD-9 tree",
+       x = "ICD-9 Tree level", y = "Number of nodes")
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
