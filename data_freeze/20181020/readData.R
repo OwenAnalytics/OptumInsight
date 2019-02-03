@@ -1,4 +1,4 @@
-# Codes for viewing data sets quickly
+# Codes for viewing the first 1000 rows of data sets quickly
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20181020")
 
@@ -9,6 +9,10 @@ baseline <- fread("baseline_20181020_freeze.csv", nrows = 1000)
 diagnosis <- fread("diagData_20181020_freeze.csv",
                    colClasses = list(character=1:73),
                    nrows = 1000)
+
+# get confinement claims
+confinement <- diagnosis[source == "confinement.inpatient",]
+
 
 procedure <- fread("procData_20181020_freeze.csv",
                    colClasses = list(character=1:112),
