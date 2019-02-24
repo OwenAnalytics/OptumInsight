@@ -29,7 +29,9 @@ draw_tree(c("342", "001"))
 draw_tree("456.1")
 draw_tree("3452", nodeSize = 10, textSize = 0.45)
 
-
+pdf("tree_453.pdf", width = 20, height = 6)
+draw_tree(453, nodeSize = 10, textSize = 0.4)
+dev.off()
 # test:
 draw_tree(c("342", "c")) # "C" is not a valid ICD-9 code
 draw_tree(c("3422")) # "3422" is not a valid ICD-9 code

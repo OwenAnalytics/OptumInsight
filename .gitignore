@@ -1,7 +1,9 @@
 *.log
 *.Rout
-/*.RData
+*.RData
 *.Rhistory
+*.rds
+*.txt
 
 preprocessing/data/*
 !preprocessing/data/analysis_data_example*.PNG
