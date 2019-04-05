@@ -1,0 +1,243 @@
+---
+title: "Simulation of Structural Topic Model"
+author: "Mengbing Li"
+date: "March 29, 2019"
+output: html_document
+---
+
+Reference: Roberts et. al. JASA (2016)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20190110/stm_package")
+
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(data.table)
+library(ggplot2)
+library(stm)
+library(wordcloud)
+library(MASS)
+library(MCMCpack)
+```
+
+
+We would like to reproduce the simulation example in the original paper. 
+
+## Generate simulated corpus data
+```{r message=FALSE, results='hide', warning=FALSE}
+
+# simulate the corpus data n.sim times
+n.sim <- 50
+
+# number of topics
+K <- 3
+# number of documents
+D <- 100
+# number of volcabulary
+V <- 50
+
+# number of words in each document
+Nd_means <- 50
+
+# Labels
+documents_names <- paste("Document", 1:D)
+topics_names <- paste("Topic", 1:K)
+terms_names <- paste("Term", 1:V, sep = "")
+
+# initialize the matrix to store posterior samples of theta
+theta_sample_stm <- matrix(0, nrow = D, ncol = n.sim)
+theta_sample_stm_loess <- matrix(0, nrow = D, ncol = n.sim)
+theta_true <- matrix(0, nrow = D, ncol = n.sim)
+theta_true_loess <- matrix(0, nrow = D, ncol = n.sim)
+
+for(sim.time in 1:n.sim){
+
+  set.seed(2019+sim.time)
+
+  N <- rpois(D, Nd_means)
+  
+  # covariates for each document
+  X <- runif(D, 0, 1)
+  
+  ## Generate latent topic and term distributions
+  # "True" Document/Topic distribution matrix
+  mu <- cbind(0.5, cos(10*X))
+  Sigma_true <- 0.5*diag(K-1)
+  
+  theta <- matrix(0, nrow = D, ncol = ncol(mu) +1)
+  for(d in 1:D){
+    eta <- c(mvrnorm(1, mu[d,], Sigma_true),0) 
+    theta[d, ] <- exp(eta) / sum(exp(eta)) # check out logsumexp trick for potential numerical overflow.
+  }
+  # set the last topic parameter to 0
+  # theta <- cbind(theta, 0)
+  colnames(theta) <- topics_names
+  rownames(theta) <- documents_names
+  
+  # "True" Topic/Term Distribution Matrix
+  B <- array(0, dim = c(K, V, D))
+  for(d in 1:D){
+    for(k in 1:K){
+      B[k, , d] <- rdirichlet(1, rep(0.05, V))
+    }
+  }
+  dimnames(B)[[3]] <- documents_names
+  dimnames(B)[[1]] <- topics_names
+  dimnames(B)[[2]] <- terms_names
+  
+  
+  # generate documents
+  documents <- c()
+  for(d in 1:D){
+    # topic-word joint probabilities
+    topic_term_prob <- t(B[,,d])%*%theta[d,]
+    document <- c()
+    for(n in 1:N[d]){
+      document <- c(document, sample(terms_names, 1, prob = topic_term_prob))
+    }
+    documents <- rbind(documents, paste(document, sep = " ", collapse = " "))
+  }
+  rownames(documents) <- documents_names
+  colnames(documents) <- "documents"
+  
+  
+  mydata <- data.frame(ind = 1:D,
+                       documents = documents,
+                       X = X)
+  
+  
+  
+  ### Process the corpus data -------------------------------------------------------------------
+  
+  #' textProcessor: Function that takes in a vector of raw texts and performs 
+  #' basic operations. This function is essentially a wrapper tm package 
+  #' where various user specified options can be selected.
+  processedDocuments <- textProcessor(mydata$documents, metadata = mydata,
+                                      removenumbers = FALSE)
+  str(processedDocuments)
+  
+  #' prepDocuments: Performs several corpus manipulations including removing 
+  #' words and renumbering word indices (to correct for zero-indexing and/or
+  #'  unusued words in the vocab vector). Also removes infrequent terms 
+  #'  depending on the user-set parameter lower.thresh
+  out <- prepDocuments(processedDocuments$documents, processedDocuments$vocab,
+                       processedDocuments$meta, lower.thresh = 15)
+  
+  
+  
+  ### Run the model -----------------------------------------------------------------------------
+  # we use the correctly specified K, and B-spline with 10 degrees of freedom for the covariate
+  fit <- stm(documents = out$documents, vocab = out$vocab,
+             K = K, prevalence =~ s(X),
+             max.em.its = 75, data = out$meta,
+             init.type = "Spectral")
+  
+  
+  
+  ### sample the values of theta for topic 2 ----------------------------------------------------
+  X_sorted <- sort(X)
+  
+  ### Posterior median of theta
+  theta_sample_stm[,sim.time] <- fit$theta[,2]
+  # calculate the loess estimate of theta[2]
+  theta_sample_stm_sorted <- theta_sample_stm[,sim.time][order(X, decreasing=FALSE)]
+  loess_data <- data.frame(theta = theta_sample_stm_sorted, X = X_sorted)
+  theta_sample_stm_loess[,sim.time] <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
+  
+  ### True theta
+  mu_true <- cbind(rep(0.5, D), cos(10*X_sorted))
+  theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)+1))
+  # calculate the loess estimate of theta[2]
+  # theta_true_sorted <- theta_true[2,][order(X, decreasing=FALSE)]
+  loess_data <- data.frame(theta = theta_true[2,], X = X_sorted)
+  theta_true_loess[,sim.time] <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
+  
+}
+```
+
+
+
+## Visualize the fit result: plot the true topic proportion of topic 2 vs covariate values
+```{r}
+# estimated theta from stm
+plot(x = NULL, y = NULL, 
+     xlim = c(0,1), ylim = c(0,1),
+     main = "STM: 
+     Grey curves are loess curves of the sampled topic proportion.
+     Black curve is the median of all loess curves.",
+     xlab = "Covariate", ylab = "Topic Proportion")
+for(sim.time in 1:n.sim){
+  lines(x = X_sorted, y = theta_sample_stm_loess[,sim.time], col="grey")
+}
+theta_sample_stm_median <- apply(theta_sample_stm_loess, 1, median)
+lines(x = X_sorted, y = theta_sample_stm_median, col="black", lwd = 2)
+
+
+# true theta
+plot(x = NULL, y = NULL, 
+     xlim = c(0,1), ylim = c(0,1),
+     main = "True Values: 
+     Grey curves are loess curves of the sampled topic proportion.
+     Black curve is the median of all loess curves.",
+     xlab = "Covariate", ylab = "Topic Proportion")
+for(sim.time in 1:n.sim){
+  lines(x = X_sorted, y = theta_true_loess[,sim.time], col="grey")
+}
+theta_true_median <- apply(theta_true_loess, 1, median)
+lines(x = X_sorted, y = theta_true_median, col="black", lwd = 2)
+```
+
+
+
+
+## Trying something else: 
+this was not how the paper generated Figure 2
+```{r}
+# plot the true topic proportion of topic 2 vs covariate values -------------------
+### but this was not how the paper generated Figure 2
+nx <- 100
+X_true <- X_sorted
+mu_true <- cbind(rep(0.5, D), cos(10*X_true))
+theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)+1))
+# plot(x = NULL, y = NULL, xlim = c(0,1),
+#   # x = X_true, y = theta_true[2,], type = "l",
+#      ylim = c(0,1))
+# lines(loess(theta_true[2,] ~ X_true, f=1/3), col="black")
+
+
+### plot the sampled topic distributions
+# we will plot the loess curve with span = 1/3 and the median of the 
+# sampled loess curves
+# create a frame of plot without points
+# pdf("stm_simulation_OriginalPaper_Figure2.3_TrueTopicProp.pdf",
+#     width = 10, height = 10)
+
+plot(x = NULL, y = NULL, 
+     xlim = c(0,1), ylim = c(0,1),
+     main = "True Values: 
+     Grey curves are loess curves of the sampled topic proportion.
+     Black curve is the median of all loess curves.",
+     xlab = "Covariate", ylab = "Topic Proportion")
+
+n.sim <- 50
+theta_sample <- matrix(0, nrow = nx, ncol = n.sim)
+theta_sample_loess <- matrix(0, nrow = nx, ncol = n.sim)
+for(j in 1:n.sim){
+  for(i in 1:nx){
+    eta_sample <- c(mvrnorm(n=1, mu = mu_true[i,], Sigma = Sigma_true),0)
+    theta_sample[i,j] <- exp(eta_sample[2]) / sum(exp(eta_sample))
+  }
+  loess_data <- data.frame(theta = theta_sample[,j], X = X_true)
+  theta_sample_loess[,j] <- loess(theta ~ X, data = loess_data, span=1/3)$fitted
+  lines(x = X_true, y = theta_sample_loess[,j], col="grey")
+}
+
+theta_sample_median <- apply(theta_sample_loess, 1, median)
+lines(x = X_true, y = theta_sample_median, col="black", lwd = 2)
+
+# dev.off()
+```
+

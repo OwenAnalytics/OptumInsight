@@ -8,7 +8,8 @@
 #' 
 #' Created: Wednesday 11/28/2018
 #' 
-#' Revisions: 
+#' Revisions: 03/15/2019 - removed Unknown category from Division
+#'    variable in the odds ratio plot.
 ########################################################################
 
 setwd('C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/preprocessing/analysis/multinominial_logit_ac3mo')
@@ -23,6 +24,7 @@ library(xlsx)
 library(readxl)
 library(mlogit)
 library(nnet)
+library(ggplot2)
 
 dat <- fread("../../data/patient_data.txt")
 
@@ -155,6 +157,7 @@ ci.higher <- rbind(ci.higher[,1], ci.higher[,2], ci.higher[,3])
 
 plot_data <- cbind(s_coef_exp, ci.lower, ci.higher)
 
+
 # specify row order
 vte_names <- c("VTE_Pulmonary.embolism", "VTE_Lower.extremity.DVT",
                "VTE_Upper.extremity.DVT", "VTE_ivc_rv_pv", "VTE_Other")
@@ -162,6 +165,8 @@ malignancy_names <- grep("malignancy_", covariateNames, value = TRUE)
 division_names <- c("divisionEAST SOUTH CENTRAL", "divisionMIDDLE ATLANTIC",
   "divisionMOUNTAIN", "divisionNEW ENGLAND", "divisionPACIFIC", "divisionSOUTH ATLANTIC",
   "divisionWEST NORTH CENTRAL", "divisionWEST SOUTH CENTRAL", "divisionUNKNOWN")
+# to remove Unknown
+division_names <- division_names[-which(division_names == "divisionUNKNOWN")]
 education_names <- grep("education", covariateNames, value = TRUE)
 income_names <- paste("income_range", c(1:5,0), sep = "")
 race_names <- grep("race", covariateNames, value = TRUE)
@@ -176,51 +181,56 @@ plot_data <- data.table(plot_data %>%
   arrange(match(covariate, covariateNames_ordered), 
           match(response, response_ordered)))
 
+
 plot_data_sub <- plot_data[covariate != "(Intercept)" & response != "Unknown/Multiple",]
 
+# remove Unknown category from Division variable
+plot_data_sub <- plot_data_sub[covariate != "divisionUNKNOWN",]
 
 # create y-axis values
+ACcategoryWidth <- 0.4
+levelWidth <- 1
 plot_data_sub$yAxis[plot_data_sub$covariate %in% other_names] <- 
-  c(rbind(1:length(other_names)-0.25, 1:length(other_names)))
+  c(rbind(1:length(other_names)-ACcategoryWidth, 1:length(other_names)))
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% race_names] <- 
-  c(rbind(length(race_names):1-0.25, length(race_names):1)) + ymax + 2
+  c(rbind(length(race_names):1-ACcategoryWidth, length(race_names):1)) + ymax + levelWidth
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% income_names] <- 
-  c(rbind(length(income_names):1-0.25, length(income_names):1)) + ymax + 2
+  c(rbind(length(income_names):1-ACcategoryWidth, length(income_names):1)) + ymax + levelWidth
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% education_names] <- 
-  c(rbind(length(education_names):1-0.25, length(education_names):1)) + ymax + 2
+  c(rbind(length(education_names):1-ACcategoryWidth, length(education_names):1)) + ymax + levelWidth
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% division_names] <- 
-  c(rbind(length(division_names):1-0.25, length(division_names):1)) + ymax + 2
+  c(rbind(length(division_names):1-ACcategoryWidth, length(division_names):1)) + ymax + levelWidth
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% malignancy_names] <- 
-  c(rbind(length(malignancy_names):1-0.25, length(malignancy_names):1)) + ymax + 2
+  c(rbind(length(malignancy_names):1-ACcategoryWidth, length(malignancy_names):1)) + ymax + levelWidth
 
 ymax <- max(plot_data_sub$yAxis, na.rm = TRUE)
 plot_data_sub$yAxis[plot_data_sub$covariate %in% vte_names] <- 
-  c(rbind(length(vte_names):1-0.25, length(vte_names):1)) + ymax + 2
+  c(rbind(length(vte_names):1-ACcategoryWidth, length(vte_names):1)) + ymax + levelWidth
 
 
 
 
 # plot_data_sub$yAxis <- 80 - plot_data_sub$yAxis
 
-
+# create covariate labels
 vte_labels <- c("VTE --- Pulmonary embolism", "Lower extremity DVT",
     "Upper extremity DVT", "IVC/RV/PV", "Other")
-malignancy_labels <- c("Malignancy --- Brain CNS", "Breast", "Gastrointestinal",
+malignancy_labels <- c("Malignancy (compared to Sarcoma/Soft tissue) --- Brain CNS", "Breast", "Gastrointestinal",
     "Genitourinary", "Gynecololgic", "Hematologic", "Lung", "Other")
 division_labels <- c("Division (compared to East North Central) --- East South Central", 
-    "Middle Atlantic",
+    "Mid-Atlantic",
     "Mountain", "New England", "Pacific", "South Atlantic", "West North Central",
-    "West South Central", "Unknown")
+    "West South Central") # , "Unknown"
 education_labels <- c("Education (compared to < Bachelor Degree) --- <= high school diploma",
     ">= Bachelor Degree", "Unknown")
 income_labels <- c("Household Income (compared to $100K+) --- <$40K", "$40K-$49K",
@@ -237,59 +247,70 @@ n_vars <- length(covariateNames_ordered) - 1 # intercept was removed
 yAxisBreaks <- plot_data_sub$yAxis[(1:n_vars)*2]
 
 ## Plot of all categories
-# ggplot(plot_data, aes(x = beta, y = yAxis)) +
-#   geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
-#   geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 1,
-#                  height = .2, color = "gray50") +
-#   geom_point(aes(size = 0.1, color = response)) +
-#   # facet_grid(.~response) +
-#   theme_bw() +
-#   theme(panel.grid.minor = element_blank()) +
-#   scale_y_continuous(breaks = (1:length(covariateNames))*2, labels = covariateNames) +
-#   scale_x_continuous(breaks = seq(0,7,1)) +
-#   coord_trans(x = "log10") +
-#   ylab("") +
-#   xlab("Odds ratio (log scale)") +
-#   ggtitle("Log odds ratio and 95% confidence intervals")
-# ggsave("plot_logOR.pdf")
 
 
-
+# distinguish different ACs by color
 ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
-  geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
-  geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 0.5,
-                 height = 0.7, color = "black") +
-  geom_point(aes(shape = response), size = 2, color = "black") +
-  scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
+  geom_vline(aes(xintercept = 1), size = .5, linetype = "dashed") +
+  geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower, color = response), size = 1.5,
+                 height = 0.5) +
+  geom_point(aes(color = response), size = 3) +
+  # scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
+  scale_colour_manual(name="Anticoagulant",  
+                      values = c("DOAC"="orange2", "Warfarin"="black")) +
   theme_bw() +
-  theme(panel.grid.minor = element_blank()) +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(size=20),
+        axis.text.y = element_text(hjust=1)) +
   scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
-  scale_x_continuous(breaks = seq(0,7,1)) +
-  coord_trans(x = "log10") +
-  ylab("") +
-  xlab("Odds ratio (log10 scale)") +
-  ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
-
-ggsave("plot_OR_log10Scale.png")
-
-
-ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
-  geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
-  geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 0.5,
-                 height = 0.7, color = "black") +
-  geom_point(aes(shape = response), size = 2, color = "black") +
-  scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
-  theme_bw() +
-  theme(panel.grid.minor = element_blank()) +
-  scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
-  scale_x_continuous(breaks = seq(0,7,1)) +
+  # scale_x_continuous(breaks = seq(0,7,1)) +
   ylab("") +
   xlab("Odds ratio") +
   ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
 
-ggsave("plot_OR_originalScale.png")
+ggsave("plot_OR_originalScale_byColor.png", height = 15, width = 20)
 
 
+
+# distinguish different ACs by shape
+ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
+  geom_vline(aes(xintercept = 1), size = .5, linetype = "dashed") +
+  geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 1.5,
+                 height = 0.5, color = "black") +
+  geom_point(aes(shape = response), size = 3, color = "black") +
+  scale_shape_manual(values = c(1, 16), name = "Anticoagulant") +
+  # scale_colour_manual(name="Anticoagulant",  
+  #                     values = c("DOAC"="orange2", "Warfarin"="black")) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(size=20),
+        axis.text.y = element_text(hjust=1)) +
+  scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
+  # scale_x_continuous(breaks = seq(0,7,1)) +
+  ylab("") +
+  xlab("Odds ratio") +
+  ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
+
+ggsave("plot_OR_originalScale_byShape.png", height = 15, width = 20)
+
+
+### log10 scale on the odds ratio
+# ggplot(plot_data_sub, aes(x = beta, y = yAxis)) +
+#   geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") +
+#   geom_errorbarh(aes(xmax = ci_higher, xmin = ci_lower), size = 0.5,
+#                  height = 0.7, color = "black") +
+#   geom_point(aes(shape = response), size = 2, color = "black") +
+#   scale_shape_manual(values = c(1, 16), name = "Anticoagulant") + 
+#   theme_bw() +
+#   theme(panel.grid.minor = element_blank()) +
+#   scale_y_continuous(breaks = yAxisBreaks, labels = covariate_labels) +
+#   scale_x_continuous(breaks = seq(0,7,1)) +
+#   coord_trans(x = "log10") +
+#   ylab("") +
+#   xlab("Odds ratio (log10 scale)") +
+#   ggtitle("Odds ratios of anticoagulants compared to LMWH and 95% confidence intervals")
+# 
+# ggsave("plot_OR_log10Scale.png")
 
 
 

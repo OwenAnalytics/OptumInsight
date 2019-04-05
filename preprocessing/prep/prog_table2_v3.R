@@ -60,6 +60,10 @@ analysis_data2[, (ses1) := lapply(.SD, function(x) ifelse(is.na(x), "U", x)), .S
 ses2 <- c("home_ownership", "networth_range", "income_range")
 analysis_data2[, (ses2) := lapply(.SD, function(x) ifelse(is.na(x), "0", x)), .SDcols=ses2]
 
+# RECODE MISSING RACE TO UNKNOWN AS "U"
+analysis_data2[, race := ifelse(race=="", "U", race),]
+
+
 ### CALCULATE TABLE 2 STATISTICS -------------------------------------------
 
 # OBTAIN ONLY TIME INVARIANT COVARIATES
@@ -156,10 +160,10 @@ table_calculate <- function(colvar){
                                "Occupation")
   
   table2_race <- table2_tab(analysis_data2, "race", colvar,
-                             c("","Asian", "Black", "Hispanic", "Unknown    ", "White"),
+                             c("Asian", "Black", "Hispanic", "Unknown    ", "White"),
                              "Race")
   # WEIRD THAT THERE IS A "36" CATEGORY IN RACE WHEN RUNNING THE FUNCTION
-  table2_race <- table2_race[-2,]
+  # table2_race <- table2_race[-2,]
 
   table2_region <- table2_tab(analysis_data2, "division", colvar, NULL, "Region")
   
@@ -257,7 +261,7 @@ table2_ac4mo <- add_p_to_AC(data = data_ac4mo, "ac4mo2", table2_ac4mo)
 
 # COMBINE THE COUNTS
 gap_col <- as.matrix(rep(NA, nrow(table2_ac3mo)), ncol=1)
-colnames(gap_col)[1] <- "Left: Index AC; \n Right: Outcome"
+colnames(gap_col)[1] <- "Left: AC at 3 months \n Right: AC at 4 months"
 table2 <- cbind(table2_ac3mo, gap_col, table2_ac4mo)
 
 
