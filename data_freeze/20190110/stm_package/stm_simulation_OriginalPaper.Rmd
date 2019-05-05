@@ -18,13 +18,26 @@ library(tidyr)
 library(data.table)
 library(ggplot2)
 library(stm)
-library(wordcloud)
+# library(wordcloud)
 library(MASS)
 library(MCMCpack)
 ```
 
 
 We would like to reproduce the simulation example in the original paper. 
+
+The number of topics $K = 3$ over $D = 100$ documents, containing a total of $V = 50$ unique words.
+
+The covariate associated with each document $d = 1, \ldots, D$ is $\mathbf{x}_d \sim \mathrm{Uniform} (0,1)$. The number of words in each document $N_d \sim \mathrm{Poisson} (50)$ independently. 
+
+Topic distribution matrix is $\Theta_{D \times K}$, where each row $\mathbf{\theta}_d \sim \mathrm{LogisticNormal}_{2} \left( \mathbf{\mu} = (0.5, 10 \cos (10 \mathbf{x}_d)), \mathbf{\Sigma} = 0.5 \mathbf{I}_2 \right)$.
+
+Topic word distribution array is $\mathbf{B}_{K \times V \times D}$, where each row $\mathbf{\beta}_{d,k} \sim \mathrm{Dirichlet}_{49} (0.05)$. That is, the topic word distributions are the same for the $K$ topics.
+
+The distribution of the $n$-th word in document $d$ is $\mathbf{w}_{d,n} \sim \mathrm{Multinomial}_V (\mathbf{B} \mathbf{\theta}_d)$, where we omit the token level latent variable $\mathbf{z}$ to reduce sampling variance.
+
+
+
 
 ## Generate simulated corpus data
 ```{r message=FALSE, results='hide', warning=FALSE}
@@ -48,8 +61,8 @@ topics_names <- paste("Topic", 1:K)
 terms_names <- paste("Term", 1:V, sep = "")
 
 # initialize the matrix to store posterior samples of theta
-theta_sample_stm <- matrix(0, nrow = D, ncol = n.sim)
-theta_sample_stm_loess <- matrix(0, nrow = D, ncol = n.sim)
+theta_sample_stm <- array(NA, c(D,K,n.sim))
+theta_sample_stm_loess <- array(NA, c(D,K,n.sim))
 theta_true <- matrix(0, nrow = D, ncol = n.sim)
 theta_true_loess <- matrix(0, nrow = D, ncol = n.sim)
 
@@ -65,13 +78,18 @@ for(sim.time in 1:n.sim){
   ## Generate latent topic and term distributions
   # "True" Document/Topic distribution matrix
   mu <- cbind(0.5, cos(10*X))
-  Sigma_true <- 0.5*diag(K-1)
+  Sigma <- 0.5*diag(K-1)
   
   theta <- matrix(0, nrow = D, ncol = ncol(mu) +1)
   for(d in 1:D){
-    eta <- c(mvrnorm(1, mu[d,], Sigma_true),0) 
-    theta[d, ] <- exp(eta) / sum(exp(eta)) # check out logsumexp trick for potential numerical overflow.
+    eta <- c(mvrnorm(1, mu[d,], Sigma),0) 
+    
+    # log-sum-exp trick to prevent underflow
+    max_eta <- max(eta)
+    log_sum_exp_eta <- max_eta + log(sum(exp(eta - max_eta)))
+    theta[d, ] <- exp(eta - log_sum_exp_eta) 
   }
+  
   # set the last topic parameter to 0
   # theta <- cbind(theta, 0)
   colnames(theta) <- topics_names
@@ -110,58 +128,143 @@ for(sim.time in 1:n.sim){
   
   
   
+  ### 1. Estimated true theta with sampling variance ----------------------------------
+  # we run simple linear regression on mu_2 = gamma_2^\top X. After obtaining the estimate of gamma_2, we compute the estimated \mu_2 and theta_2
+  
+  X_order <- order(X)
+  
+  # create linear regression data
+  lm_data <- mydata[X_order,]
+  lm_data$eta_1 <- 0
+  lm_data$eta_2 <- 0
+  for(d in 1:D){
+    mu_d <- c(0.5, cos(10*lm_data$X[d]))
+    lm_data[d, c("eta_1", "eta_2")] <- mvrnorm(1, mu_d, Sigma_true)
+  }
+  lm_data$eta_3 <- 0
+  lm_fit <- lm(eta_2 ~ s(X), data = lm_data)
+  lm_data$mu_hat <- lm_fit$fitted.values
+  # lm_data$theta_est <- apply(cbind(0.5, lm_data[, c("mu_hat", "eta_3")]), 1, function(x) exp(x) / sum(exp(x)))[2,]
+  lm_data$theta_est <- apply(lm_data[, c("eta_1", "mu_hat", "eta_3")], 1, function(x) exp(x) / sum(exp(x)))[2,]
+  theta_true_loess <- loess(theta_est ~ X, data=lm_data, span=1/3)$fitted
+  
+  if(sim.time==1){
+    plot(x = X[order(X)], y = theta_true_loess, type="l", col="grey", lwd = 2, ylim=0:1)
+  }
+  else{
+    lines(x = X[order(X)], y = theta_true_loess, col="grey", lwd = 2)
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   ### Process the corpus data -------------------------------------------------------------------
   
   #' textProcessor: Function that takes in a vector of raw texts and performs 
   #' basic operations. This function is essentially a wrapper tm package 
   #' where various user specified options can be selected.
-  processedDocuments <- textProcessor(mydata$documents, metadata = mydata,
-                                      removenumbers = FALSE)
-  str(processedDocuments)
+  # processedDocuments <- textProcessor(mydata$documents, metadata = mydata,
+  #                                     removenumbers = FALSE)
+  # # str(processedDocuments)
+  # 
+  # #' prepDocuments: Performs several corpus manipulations including removing 
+  # #' words and renumbering word indices (to correct for zero-indexing and/or
+  # #'  unusued words in the vocab vector). Also removes infrequent terms 
+  # #'  depending on the user-set parameter lower.thresh
+  # out <- prepDocuments(processedDocuments$documents, processedDocuments$vocab,
+  #                      processedDocuments$meta, lower.thresh = 15)
+  # 
+  # 
+  # 
+  # ### Run the model -----------------------------------------------------------------------------
+  # # we use the correctly specified K, and B-spline with 10 degrees of freedom for the covariate
+  # fit <- stm(documents = out$documents, vocab = out$vocab,
+  #            K = K, prevalence =~ s(X),
+  #            max.em.its = 75, data = out$meta,
+  #            init.type = "Spectral")
+  # 
+  # # estimateEffect: simulates a set of parameters which can then be plotted. 
+  # # If there are multiple variables specified in estimateEffect, then all other 
+  # # variables are held at their sample median.
+  # prep <- estimateEffect(c(2) ~ s(X), fit, metadata = out$meta, nsims = 1)
+  # plot(prep, "X", method = "continuous")
   
-  #' prepDocuments: Performs several corpus manipulations including removing 
-  #' words and renumbering word indices (to correct for zero-indexing and/or
-  #'  unusued words in the vocab vector). Also removes infrequent terms 
-  #'  depending on the user-set parameter lower.thresh
-  out <- prepDocuments(processedDocuments$documents, processedDocuments$vocab,
-                       processedDocuments$meta, lower.thresh = 15)
   
   
   
-  ### Run the model -----------------------------------------------------------------------------
-  # we use the correctly specified K, and B-spline with 10 degrees of freedom for the covariate
-  fit <- stm(documents = out$documents, vocab = out$vocab,
-             K = K, prevalence =~ s(X),
-             max.em.its = 75, data = out$meta,
-             init.type = "Spectral")
+
+
   
   
-  
-  ### sample the values of theta for topic 2 ----------------------------------------------------
-  X_sorted <- sort(X)
-  
-  ### Posterior median of theta
-  theta_sample_stm[,sim.time] <- fit$theta[,2]
-  # calculate the loess estimate of theta[2]
-  theta_sample_stm_sorted <- theta_sample_stm[,sim.time][order(X, decreasing=FALSE)]
-  loess_data <- data.frame(theta = theta_sample_stm_sorted, X = X_sorted)
-  theta_sample_stm_loess[,sim.time] <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
-  
-  ### True theta
-  mu_true <- cbind(rep(0.5, D), cos(10*X_sorted))
-  theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)+1))
-  # calculate the loess estimate of theta[2]
-  # theta_true_sorted <- theta_true[2,][order(X, decreasing=FALSE)]
-  loess_data <- data.frame(theta = theta_true[2,], X = X_sorted)
-  theta_true_loess[,sim.time] <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
+  # ### True theta values with sampling variance -----------------------------------
+  # mu_true_sample <- cbind(rep(0.5, D), cos(10*X_sorted), 0)
+  # eta_true_sample <- mvrnorm(n.sim, mu_true_sample, Sigma_true)
+  # theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)))
+  # # calculate the loess estimate of theta[2]
+  # # theta_true_sorted <- theta_true[2,][order(X, decreasing=FALSE)]
+  # loess_data <- data.frame(theta = theta_true[2,], X = X_sorted)
+  # theta_true_loess[,sim.time] <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
   
 }
 ```
 
 
 
-## Visualize the fit result: plot the true topic proportion of topic 2 vs covariate values
+
 ```{r}
+### To plot the black curve in the paper
+### True theta with no sampling variance
+X_true <- seq(0,1,length.out = 1000)
+mu_true <- cbind(rep(0.5, D), cos(10*X_true), 0)
+theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)))
+# calculate the loess estimate of theta[2]
+loess_data <- data.frame(theta = theta_true[2,], X = X_true)
+theta_true_loess <- loess(theta ~ X, data=loess_data, span=1/3)$fitted
+
+plot(x = X_true, y = theta_true_loess, type="l", col="black", lwd = 2, ylim=0:1)
+```
+
+
+```{r}
+### Estimated true theta with sampling variance ----------------------------------
+# we run linear regression on mu_2 = gamma_2^\top X. After obtaining the estimate of 
+# gamma_2, we compute the estimated \mu_2 --> theta_2
+
+X_order <- order(X)
+lm_data <- mydata[X_order,]
+lm_data$eta_1 <- 0
+lm_data$eta_2 <- 0
+for(d in 1:D){
+  mu_d <- c(0.5, lm_data$X[d])
+  lm_data[d, c("eta_1", "eta_2")] <- mvrnorm(1, mu_d, Sigma_true)
+}
+lm_data$eta_3 <- 0
+lm_fit <- lm(eta_2 ~ s(X[order(X)]), data = lm_data)
+lm_data$mu_hat <- lm_fit$fitted.values
+# lm_data$theta_est <- apply(cbind(0.5, lm_data[, c("mu_hat", "eta_3")]), 1, function(x) exp(x) / sum(exp(x)))[2,]
+lm_data$theta_est <- apply(lm_data[, c("eta_1", "mu_hat", "eta_3")], 1, function(x) exp(x) / sum(exp(x)))[2,]
+theta_true_loess <- loess(theta_est ~ X[order(X)], data=lm_data, span=1/3)$fitted
+
+
+plot(x = X[order(X)], y = theta_true_loess, type="l", col="black", lwd = 2, ylim=0:1)
+
+
+```
+
+
+
+
+## Visualize the fit result: plot the true topic proportion of topic 2 vs covariate values
+```{r eval=F, echo=F}
+X_sorted <- sort(X)
 # estimated theta from stm
 plot(x = NULL, y = NULL, 
      xlim = c(0,1), ylim = c(0,1),
@@ -199,6 +302,7 @@ this was not how the paper generated Figure 2
 # plot the true topic proportion of topic 2 vs covariate values -------------------
 ### but this was not how the paper generated Figure 2
 nx <- 100
+X_sorted <- sort(X)
 X_true <- X_sorted
 mu_true <- cbind(rep(0.5, D), cos(10*X_true))
 theta_true <- apply(mu_true, 1, function(x) exp(x) / sum(exp(x)+1))

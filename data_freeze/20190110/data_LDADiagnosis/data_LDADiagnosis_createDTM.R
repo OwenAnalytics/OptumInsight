@@ -10,6 +10,7 @@
 #' 
 #' Revisions: 1/10/2019 - updated counts of the words. Previously
 #'   all counts were 1.
+#'   04/21/2019 - run LDA by month
 ##################################################
 
 setwd("C:/Users/mengbing/Box Sync/OptumInsight_DataManagement/data_freeze/20190110/data_LDADiagnosis")
